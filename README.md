@@ -1,5 +1,6 @@
-# Weekly Performance Evaluator (Week 04) — Inheritance + Composition
 [![Unit Tests](https://github.com/USERNAME/REPO/actions/workflows/tests.yml/badge.svg)](https://github.com/USERNAME/REPO/actions/workflows/tests.yml)
+
+# Weekly Performance Evaluator (Week 04) — Inheritance + Composition
 
 This project is my Week 04 assignment for ITCS 2550.  
 It continues Week 03, but now the program is restructured using **inheritance** and **composition** (Chapter 11).
