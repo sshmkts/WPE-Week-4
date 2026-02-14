@@ -1,91 +1,83 @@
 [![Unit Tests](https://github.com/sshmkts/WPE-Week-4/actions/workflows/tests.yml/badge.svg)](https://github.com/sshmkts/WPE-Week-4/actions/workflows/tests.yml)
 
-# Weekly Performance Evaluator (Week 04) — Inheritance + Composition
+Week 05 – Weekly Performance Evaluator (Upgrade from Week 04)
 
-This project is my Week 04 assignment for ITCS 2550.  
-It continues Week 03, but now the program is restructured using **inheritance** and **composition** (Chapter 11).
+Course: ITCS 2550
+Author: Oleksandr Mykytsei
+Term: Winter 2026
 
-## What the program does
-The program tracks a player's weekly training:
-- asks for name, age, number of sessions, hours per session, and average sleep
-- calculates total/average training and a readiness score
-- shows different reports from a menu:
-  1) Level report  
-  2) Training plan report  
-  3) Recovery report  
+What I did (Week 5 changes)
 
-## Class design (Week 04 requirements)
+This week I upgraded my Week 04 project to use abstract classes, virtual functions, polymorphism, and dynamic memory.
 
-### Base Class: `WeeklyReport`
-Contains the required base fields:
-- `string` player name  
-- `int` age  
-- `enum PlayerLevel` (Week 01 enum requirement)
+Main features
 
-Also includes:
-- default + parameterized constructors
-- getters/setters
-- `virtual print()` to display base info
-- `protected` member: `level` (used by derived classes)
+Abstract base class: WeeklyReport
 
-### Composition Class: `SessionStats`
-This class stores session summary:
-- session count
-- total hours
-- average hours
+Has a virtual destructor
 
-Includes:
-- constructors
-- getters/setters
-- helper method: `isEmpty()`
+Has a pure virtual function: getType()
 
-### Derived Classes
-Both derived classes override `print()` and call `WeeklyReport::print()` first.
+print() is virtual and used polymorphically
 
-#### `TrainingPlanReport : public WeeklyReport`
-Adds:
-- focus (string)
-- technical minutes (double)
-- conditioning minutes (double)
-- composition member: `SessionStats stats`
+Derived classes:
 
-#### `RecoveryReport : public WeeklyReport`
-Adds:
-- fatigue (string)
-- rest days (int)
-- tip (string)
-- composition member: `SessionStats stats`
+LevelReport
 
-### Manager Class: `TrainingLog`
-Handles user input/menu and creates the base/derived reports.
+TrainingPlanReport
 
-## Unit Tests (doctest)
-This project includes **6+ doctest tests**, focused on:
-- constructors
-- getters/setters
-- composition class behavior (`SessionStats`)
-- derived classes keeping base + derived fields
-- `TrainingLog` stats updates using `addSession()`
+RecoveryReport
 
-Tests run when `_DEBUG` is enabled.
+Composition:
 
-## How to run
+SessionStats is used inside derived reports to store session totals/averages
 
-### Program mode (Release)
-Run normally to use the menu and interactive input.
+Manager / container (no STL): ReportManager
 
-### Test mode (Debug)
-Run in Debug to execute doctest unit tests.
+Stores WeeklyReport** items (dynamic array of base pointers)
 
-## GitHub Actions
-This repo includes a GitHub Actions workflow that runs tests on push.  
-The status badge should show passing when all tests succeed.
+Tracks size and capacity
 
-## Class Diagram
-A Visual Studio **Class Diagram (.cd)** file is included in the repo to show:
-- inheritance (`WeeklyReport` → derived classes)
-- composition (`SessionStats` inside derived classes)
+Supports add, removeAt, resize
 
-## Notes
-- No magic numbers: constants are defined at the top.
-- Only topics up to Chapter 11 are used.
+Deletes all allocated objects (no memory leaks)
+
+Copying is disabled to avoid Rule of 3/5 problems
+
+How the program works
+
+User enters weekly training data (sessions + sleep).
+
+The program calculates training stats and readiness.
+
+Menu allows:
+
+Add Level Report
+
+Add Training Plan Report
+
+Add Recovery Report
+
+Print all saved reports (polymorphism)
+
+Delete a report
+
+Unit Tests
+
+In _DEBUG, the program runs doctest tests.
+
+Tests cover:
+
+SessionStats default behavior
+
+Polymorphism (getType() on base pointers)
+
+ReportManager add/remove/resize
+
+TrainingLog session logic (without cin)
+
+Notes
+
+All objects are created with new and cleaned using a virtual base destructor.
+
+main() runs only in Release mode (#ifndef _DEBUG).
