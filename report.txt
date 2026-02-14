@@ -1,16 +1,16 @@
 WEEKLY PERFORMANCE REPORT (Week 4)
 Section: LEVEL
 ----------------------------------
-Player:                               Alex
+Player:                               Awlf
 Age:                                    21
 Total training:                          3
 Avg training:                          1.5
-Avg sleep:                               5
+Avg sleep:                               6
 Level:                             Amateur
-Readiness:                               5
+Readiness:                              10
 Advice:               Build base: 3 sessions + 8h sleep.
 
 Session details:
 Session   Hours          
-1         2              
-2         1              
+1         1              
+2         2              

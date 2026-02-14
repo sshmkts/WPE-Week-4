@@ -1,8 +1,9 @@
-// Week 4 - Weekly Performance Evaluator
-// This week: inheritance + composition
-// Base class: WeeklyReport
-// Derived: TrainingPlanReport, RecoveryReport
-// Composition class: SessionStats
+// Week 5 - Weekly Performance Evaluator (UPGRADE from Week 4)
+// This week: abstract classes + virtual functions + polymorphism + dynamic memory
+// Base class (abstract): WeeklyReport
+// Derived: LevelReport, TrainingPlanReport, RecoveryReport
+// Composition: SessionStats (inside derived)
+// Manager/container: ReportManager (dynamic array of WeeklyReport*)
 // Unit tests run in _DEBUG
 
 #ifdef _DEBUG
@@ -36,8 +37,9 @@ const int MIN_AGE = 1;
 const double MIN_TRAINING_HOURS = 0.0;
 const double MIN_SLEEP_HOURS = 0.01;
 
+// menu now includes add/print/delete
 const int MENU_MIN_CHOICE = 0;
-const int MENU_MAX_CHOICE = 3;
+const int MENU_MAX_CHOICE = 5;
 
 const double SHIFT_MIN = 10.0;
 
@@ -67,8 +69,9 @@ string levelToString(PlayerLevel level);
 
 void printSessionsTable(const double sessions[], int sessionCount);
 
-// SessionStats = small class to store session numbers (count/total/avg)
-// This object is inside the derived classes (composition)
+// --------------------
+// Composition class
+// --------------------
 class SessionStats
 {
 private:
@@ -91,7 +94,6 @@ public:
         avgHours = (avg < 0.0 ? 0.0 : avg);
     }
 
-    // basic getters/setters
     int getSessionCount() const { return sessionCount; }
     double getTotalHours() const { return totalHours; }
     double getAvgHours() const { return avgHours; }
@@ -100,20 +102,19 @@ public:
     void setTotalHours(double total) { totalHours = (total < 0.0 ? 0.0 : total); }
     void setAvgHours(double avg) { avgHours = (avg < 0.0 ? 0.0 : avg); }
 
-    // helper: true if no sessions
     bool isEmpty() const
     {
         return sessionCount == 0;
     }
 };
 
-// WeeklyReport = base class (name, age, level, sleep, score, advice)
-// I keep "level" protected so derived classes can use it
+// --------------------
+// Abstract base class
+// --------------------
 class WeeklyReport
 {
 protected:
-    // protected so child classes can access
-    PlayerLevel level;
+    PlayerLevel level; // protected so child classes can access
 
 private:
     string playerName;
@@ -144,6 +145,25 @@ public:
         advice = "";
     }
 
+    // Base is now ABSTRACT:
+    // - virtual destructor (for safe delete through base*)
+    // - at least 1 pure virtual function (forces derived override)
+    virtual ~WeeklyReport() {}
+
+    virtual string getType() const = 0; // PURE VIRTUAL (required)
+
+    // prints the base info (virtual, still has implementation)
+    virtual void print() const
+    {
+        cout << "\n===== WEEKLY REPORT (" << getType() << ") =====\n";
+        cout << "Player: " << playerName << "\n";
+        cout << "Age: " << age << "\n";
+        cout << "Level: " << levelToString(level) << "\n";
+        cout << "Avg sleep: " << sleepHours << "\n";
+        cout << "Readiness Score: " << readinessScore << "\n";
+        cout << "Advice: " << advice << "\n";
+    }
+
     // basic getters/setters
     string getPlayerName() const { return playerName; }
     int getAge() const { return age; }
@@ -158,32 +178,80 @@ public:
     void setSleepHours(double hours) { sleepHours = (hours < 0.0 ? 0.0 : hours); }
     void setReadinessScore(double score) { readinessScore = score; }
     void setAdvice(const string& a) { advice = a; }
-
-    // prints the base info
-    virtual void print() const
-    {
-        cout << "\n===== WEEKLY REPORT (BASE) =====\n";
-        cout << "Player: " << playerName << "\n";
-        cout << "Age: " << age << "\n";
-        cout << "Level: " << levelToString(level) << "\n";
-        cout << "Avg sleep: " << sleepHours << "\n";
-        cout << "Readiness Score: " << readinessScore << "\n";
-        cout << "Advice: " << advice << "\n";
-    }
-
-    // destructor for base class
-    virtual ~WeeklyReport() {}
 };
 
-// TrainingPlanReport = derived class
-// Adds plan info + has SessionStats inside (composition)
+// --------------------
+// LevelReport (NEW derived) - replaces old "WeeklyReport base(...)" usage
+// --------------------
+class LevelReport : public WeeklyReport
+{
+private:
+    SessionStats stats;            // composition
+    double sessions[MAX_SESSIONS]; // store per-session hours
+    int sessionCount;
+    double totalTraining;
+    double avgTraining;
+
+public:
+    LevelReport()
+        : WeeklyReport()
+    {
+        stats = SessionStats();
+        sessionCount = 0;
+        totalTraining = 0.0;
+        avgTraining = 0.0;
+        for (int i = 0; i < MAX_SESSIONS; ++i) sessions[i] = 0.0;
+    }
+
+    LevelReport(const string& name, int playerAge, PlayerLevel lvl,
+        const double sess[], int count, double total, double avg)
+        : WeeklyReport(name, playerAge, lvl)
+    {
+        sessionCount = (count < 0 ? 0 : count);
+        if (sessionCount > MAX_SESSIONS) sessionCount = MAX_SESSIONS;
+
+        totalTraining = (total < 0.0 ? 0.0 : total);
+        avgTraining = (avg < 0.0 ? 0.0 : avg);
+
+        for (int i = 0; i < MAX_SESSIONS; ++i)
+            sessions[i] = (i < sessionCount ? sess[i] : 0.0);
+
+        stats = SessionStats(sessionCount, totalTraining, avgTraining);
+    }
+
+    string getType() const override { return "Level"; }
+
+    void print() const override
+    {
+        WeeklyReport::print();
+
+        cout << "\n----- LEVEL DETAILS (DERIVED) -----\n";
+        cout << "Total training this week: " << totalTraining << "\n";
+        cout << "Average training per session: " << avgTraining << "\n";
+        cout << "Sessions: " << stats.getSessionCount()
+            << " | Total hours: " << stats.getTotalHours()
+            << " | Avg hours: " << stats.getAvgHours() << "\n";
+
+        printSessionsTable(sessions, sessionCount);
+    }
+
+    // getters for tests
+    int getSessionCount() const { return sessionCount; }
+    double getTotalTraining() const { return totalTraining; }
+    double getAvgTraining() const { return avgTraining; }
+    SessionStats getStats() const { return stats; }
+};
+
+// --------------------
+// TrainingPlanReport (derived)
+// --------------------
 class TrainingPlanReport : public WeeklyReport
 {
 private:
-    SessionStats stats;  // stores session stats (composition)
-    string focus;        // plan focus
-    double techMins;     // minutes for technical work
-    double condMins;     // minutes for conditioning
+    SessionStats stats; // composition
+    string focus;
+    double techMins;
+    double condMins;
 
 public:
     TrainingPlanReport()
@@ -205,7 +273,8 @@ public:
         condMins = cond;
     }
 
-    // getters/setters for the extra fields
+    string getType() const override { return "Training Plan"; }
+
     SessionStats getStats() const { return stats; }
     string getFocus() const { return focus; }
     double getTechMins() const { return techMins; }
@@ -216,10 +285,9 @@ public:
     void setTechMins(double mins) { techMins = mins; }
     void setCondMins(double mins) { condMins = mins; }
 
-    // print base + my extra fields
     void print() const override
     {
-        WeeklyReport::print(); // print base part first
+        WeeklyReport::print();
 
         cout << "\n----- TRAINING PLAN (DERIVED) -----\n";
         cout << "Focus: " << focus << "\n";
@@ -231,15 +299,16 @@ public:
     }
 };
 
-// RecoveryReport = derived class
-// Adds recovery info + has SessionStats inside (composition)
+// --------------------
+// RecoveryReport (derived)
+// --------------------
 class RecoveryReport : public WeeklyReport
 {
 private:
-    SessionStats stats;  // stores session stats (composition)
-    string fatigue;      // fatigue level
-    int restDays;        // how many rest days
-    string tip;          // simple tip
+    SessionStats stats; // composition
+    string fatigue;
+    int restDays;
+    string tip;
 
 public:
     RecoveryReport()
@@ -261,7 +330,8 @@ public:
         tip = t;
     }
 
-    // getters/setters for the extra fields
+    string getType() const override { return "Recovery"; }
+
     SessionStats getStats() const { return stats; }
     string getFatigue() const { return fatigue; }
     int getRestDays() const { return restDays; }
@@ -272,10 +342,9 @@ public:
     void setRestDays(int days) { restDays = (days < 0 ? 0 : days); }
     void setTip(const string& t) { tip = t; }
 
-    // print base + my extra fields
     void print() const override
     {
-        WeeklyReport::print(); // print base part first
+        WeeklyReport::print();
 
         cout << "\n----- RECOVERY (DERIVED) -----\n";
         cout << "Fatigue: " << fatigue << "\n";
@@ -287,7 +356,127 @@ public:
     }
 };
 
-// TrainingLog = runs the program (input + calculations + menu)
+// --------------------
+// ReportManager (NEW) - dynamic array of base pointers
+// --------------------
+class ReportManager
+{
+private:
+    WeeklyReport** items; // dynamic array of base pointers
+    int size;
+    int capacity;
+
+    void resize(int newCapacity)
+    {
+        if (newCapacity <= capacity) return;
+
+        WeeklyReport** newItems = new WeeklyReport * [newCapacity];
+
+        for (int i = 0; i < size; ++i)
+            newItems[i] = items[i];
+
+        for (int i = size; i < newCapacity; ++i)
+            newItems[i] = nullptr;
+
+        delete[] items;
+        items = newItems;
+        capacity = newCapacity;
+    }
+
+public:
+    // stop copying (Rule of 3/5)
+    ReportManager(const ReportManager&) = delete;
+    ReportManager& operator=(const ReportManager&) = delete;
+
+    ReportManager(int initialCapacity = 2)
+    {
+        if (initialCapacity < 1) initialCapacity = 1;
+        capacity = initialCapacity;
+        size = 0;
+
+        items = new WeeklyReport * [capacity];
+        for (int i = 0; i < capacity; ++i)
+            items[i] = nullptr;
+    }
+
+    ~ReportManager()
+    {
+        clear();
+        delete[] items;
+        items = nullptr;
+        capacity = 0;
+    }
+
+    void clear()
+    {
+        for (int i = 0; i < size; ++i)
+        {
+            delete items[i]; // safe because base has virtual destructor
+            items[i] = nullptr;
+        }
+        size = 0;
+    }
+
+    int getSize() const { return size; }
+    int getCapacity() const { return capacity; }
+
+    bool add(WeeklyReport* p)
+    {
+        if (p == nullptr) return false;
+
+        if (size >= capacity)
+            resize(capacity * 2);
+
+        items[size] = p;
+        size++;
+        return true;
+    }
+
+    bool removeAt(int index)
+    {
+        if (index < 0 || index >= size) return false;
+
+        delete items[index];
+        items[index] = nullptr;
+
+        for (int i = index; i < size - 1; ++i)
+            items[i] = items[i + 1];
+
+        items[size - 1] = nullptr;
+        size--;
+        return true;
+    }
+
+    WeeklyReport* getAt(int index) const
+    {
+        if (index < 0 || index >= size) return nullptr;
+        return items[index];
+    }
+
+    void printAll() const
+    {
+        if (size == 0)
+        {
+            cout << "\n(Manager) No reports saved yet.\n";
+            return;
+        }
+
+        cout << "\n==============================\n";
+        cout << " SAVED REPORTS (" << size << ")\n";
+        cout << "==============================\n";
+
+        for (int i = 0; i < size; ++i)
+        {
+            cout << "\n[#" << (i + 1) << "]\n";
+            if (items[i] != nullptr)
+                items[i]->print(); // POLYMORPHIC call
+        }
+    }
+};
+
+// --------------------
+// TrainingLog (upgraded): uses ReportManager
+// --------------------
 class TrainingLog
 {
 private:
@@ -304,6 +493,8 @@ private:
     PlayerLevel level;
     double readinessScore;
     string advice;
+
+    ReportManager manager; // owns all dynamically allocated reports
 
     void computeTrainingStats()
     {
@@ -343,14 +534,156 @@ private:
             advice = "Good balance.";
     }
 
-    // makes a SessionStats object from current data
     SessionStats buildStats() const
     {
         return SessionStats(sessionCount, totalTraining, avgTraining);
     }
 
+    void addLevelReport()
+    {
+        WeeklyReport* rpt = new LevelReport(
+            name, age, level,
+            sessions, sessionCount,
+            totalTraining, avgTraining
+        );
+
+        rpt->setSleepHours(sleepHours);
+        rpt->setReadinessScore(readinessScore);
+        rpt->setAdvice(advice);
+
+        manager.add(rpt);
+
+        // optional file output
+        ofstream out("report.txt");
+        if (out)
+        {
+            out << "WEEKLY PERFORMANCE REPORT (Week 5)\n";
+            out << "Section: LEVEL\n";
+            out << "----------------------------------\n";
+            out << left << setw(22) << "Player:" << right << setw(20) << name << "\n";
+            out << left << setw(22) << "Age:" << right << setw(20) << age << "\n";
+            out << left << setw(22) << "Total training:" << right << setw(20) << totalTraining << "\n";
+            out << left << setw(22) << "Avg training:" << right << setw(20) << avgTraining << "\n";
+            out << left << setw(22) << "Avg sleep:" << right << setw(20) << sleepHours << "\n";
+            out << left << setw(22) << "Level:" << right << setw(20) << levelToString(level) << "\n";
+            out << left << setw(22) << "Readiness:" << right << setw(20) << readinessScore << "\n";
+            out << left << setw(22) << "Advice:" << right << setw(20) << advice << "\n\n";
+
+            out << "Session details:\n";
+            out << left << setw(10) << "Session" << setw(15) << "Hours" << "\n";
+            for (int i = 0; i < sessionCount; ++i)
+                out << left << setw(10) << (i + 1) << setw(15) << sessions[i] << "\n";
+        }
+        else
+        {
+            cout << "Could not write report.txt\n";
+        }
+
+        cout << "\n(Level report added to manager)\n";
+    }
+
+    void addTrainingPlanReport()
+    {
+        string planFocus;
+        double techMins;
+        double condMins;
+
+        switch (level)
+        {
+        case LEVEL_PRO:
+            techMins = PRO_TECH_MINS;
+            condMins = PRO_COND_MINS;
+            planFocus = "High Tempo";
+            break;
+        case LEVEL_SEMI_PRO:
+            techMins = INT_TECH_MINS;
+            condMins = INT_COND_MINS;
+            planFocus = "Balanced";
+            break;
+        default:
+            techMins = BEG_TECH_MINS;
+            condMins = BEG_COND_MINS;
+            planFocus = "Fundamentals";
+            break;
+        }
+
+        if (sleepHours < SLEEP_MIN_OK && condMins >= SHIFT_MIN)
+        {
+            techMins += SHIFT_MIN;
+            condMins -= SHIFT_MIN;
+        }
+
+        WeeklyReport* rpt = new TrainingPlanReport(
+            name, age, level,
+            buildStats(),
+            planFocus, techMins, condMins
+        );
+
+        rpt->setSleepHours(sleepHours);
+        rpt->setReadinessScore(readinessScore);
+        rpt->setAdvice(advice);
+
+        manager.add(rpt);
+        cout << "\n(Training plan report added to manager)\n";
+    }
+
+    void addRecoveryReport()
+    {
+        string fatigue = "Low";
+        int rest = REST_DAYS_LOW;
+        string tip;
+
+        if (sleepHours < SLEEP_MIN_OK)
+            fatigue = "High";
+        else if (totalTraining >= PRO_TRAIN_HRS || totalTraining < INT_TRAIN_HRS)
+            fatigue = "Moderate";
+
+        if (fatigue == "High")
+            rest = REST_DAYS_HIGH;
+        else if (fatigue == "Moderate")
+            rest = REST_DAYS_MODERATE;
+
+        if (sleepHours < SLEEP_MIN_OK)
+            tip = "Aim for 8h sleep.";
+        else if (totalTraining >= PRO_TRAIN_HRS)
+            tip = "Foam roll.";
+        else
+            tip = "Light stretching.";
+
+        WeeklyReport* rpt = new RecoveryReport(
+            name, age, level,
+            buildStats(),
+            fatigue, rest, tip
+        );
+
+        rpt->setSleepHours(sleepHours);
+        rpt->setReadinessScore(readinessScore);
+        rpt->setAdvice(advice);
+
+        manager.add(rpt);
+        cout << "\n(Recovery report added to manager)\n";
+    }
+
+    void deleteReport()
+    {
+        if (manager.getSize() == 0)
+        {
+            cout << "\nNothing to delete.\n";
+            return;
+        }
+
+        int idx = getValidInt("Enter report number to delete (1..N): ", 1);
+        idx = idx - 1;
+
+        if (manager.removeAt(idx))
+            cout << "Deleted.\n";
+        else
+            cout << "Invalid index.\n";
+    }
+
 public:
     TrainingLog()
+        : manager(2) // start small so resize can be demonstrated
     {
         name = "";
         age = 0;
@@ -368,7 +701,6 @@ public:
             sessions[i] = 0.0;
     }
 
-    // gets input from the user
     void setup()
     {
         cout << "Enter player's full name: ";
@@ -401,7 +733,6 @@ public:
         evaluateLevel();
     }
 
-    // menu loop
     void runMenu()
     {
         int choice;
@@ -412,142 +743,26 @@ public:
             switch (choice)
             {
             case 1:
-                showLevelReport();
+                addLevelReport();
                 break;
             case 2:
-                showTrainingPlanReport();
+                addTrainingPlanReport();
                 break;
             case 3:
-                showRecoveryReport();
+                addRecoveryReport();
+                break;
+            case 4:
+                manager.printAll();
+                break;
+            case 5:
+                deleteReport();
                 break;
             case 0:
-                cout << "\nExiting...\n";
+                cout << "\nExiting... (Manager destructor will clean memory)\n";
                 break;
             }
 
         } while (choice != 0);
-    }
-
-    void showLevelReport() const
-    {
-        WeeklyReport base(name, age, level);
-        base.setSleepHours(sleepHours);
-        base.setReadinessScore(readinessScore);
-        base.setAdvice(advice);
-
-        base.print();
-
-        cout << "\n----- LEVEL DETAILS -----\n";
-        cout << "Total training this week: " << totalTraining << "\n";
-        cout << "Average training per session: " << avgTraining << "\n";
-
-        printSessionsTable(sessions, sessionCount);
-
-        // optional: write a small report file
-        ofstream out("report.txt");
-        if (out)
-        {
-            out << "WEEKLY PERFORMANCE REPORT (Week 4)\n";
-            out << "Section: LEVEL\n";
-            out << "----------------------------------\n";
-            out << left << setw(22) << "Player:" << right << setw(20) << name << "\n";
-            out << left << setw(22) << "Age:" << right << setw(20) << age << "\n";
-            out << left << setw(22) << "Total training:" << right << setw(20) << totalTraining << "\n";
-            out << left << setw(22) << "Avg training:" << right << setw(20) << avgTraining << "\n";
-            out << left << setw(22) << "Avg sleep:" << right << setw(20) << sleepHours << "\n";
-            out << left << setw(22) << "Level:" << right << setw(20) << levelToString(level) << "\n";
-            out << left << setw(22) << "Readiness:" << right << setw(20) << readinessScore << "\n";
-            out << left << setw(22) << "Advice:" << right << setw(20) << advice << "\n\n";
-
-            out << "Session details:\n";
-            out << left << setw(10) << "Session" << setw(15) << "Hours" << "\n";
-            for (int i = 0; i < sessionCount; ++i)
-                out << left << setw(10) << (i + 1) << setw(15) << sessions[i] << "\n";
-        }
-        else
-        {
-            cout << "Could not write report.txt\n";
-        }
-    }
-
-    void showTrainingPlanReport() const
-    {
-        string planFocus;
-        double techMins;
-        double condMins;
-
-        switch (level)
-        {
-        case LEVEL_PRO:
-            techMins = PRO_TECH_MINS;
-            condMins = PRO_COND_MINS;
-            planFocus = "High Tempo";
-            break;
-        case LEVEL_SEMI_PRO:
-            techMins = INT_TECH_MINS;
-            condMins = INT_COND_MINS;
-            planFocus = "Balanced";
-            break;
-        default:
-            techMins = BEG_TECH_MINS;
-            condMins = BEG_COND_MINS;
-            planFocus = "Fundamentals";
-            break;
-        }
-
-        if (sleepHours < SLEEP_MIN_OK && condMins >= SHIFT_MIN)
-        {
-            techMins += SHIFT_MIN;
-            condMins -= SHIFT_MIN;
-        }
-
-        TrainingPlanReport rpt(
-            name, age, level,
-            buildStats(),
-            planFocus, techMins, condMins
-        );
-
-        rpt.setSleepHours(sleepHours);
-        rpt.setReadinessScore(readinessScore);
-        rpt.setAdvice(advice);
-
-        rpt.print();
-    }
-
-    void showRecoveryReport() const
-    {
-        string fatigue = "Low";
-        int rest = REST_DAYS_LOW;
-        string tip;
-
-        if (sleepHours < SLEEP_MIN_OK)
-            fatigue = "High";
-        else if (totalTraining >= PRO_TRAIN_HRS || totalTraining < INT_TRAIN_HRS)
-            fatigue = "Moderate";
-
-        if (fatigue == "High")
-            rest = REST_DAYS_HIGH;
-        else if (fatigue == "Moderate")
-            rest = REST_DAYS_MODERATE;
-
-        if (sleepHours < SLEEP_MIN_OK)
-            tip = "Aim for 8h sleep.";
-        else if (totalTraining >= PRO_TRAIN_HRS)
-            tip = "Foam roll.";
-        else
-            tip = "Light stretching.";
-
-        RecoveryReport rpt(
-            name, age, level,
-            buildStats(),
-            fatigue, rest, tip
-        );
-
-        rpt.setSleepHours(sleepHours);
-        rpt.setReadinessScore(readinessScore);
-        rpt.setAdvice(advice);
-
-        rpt.print();
     }
 
     // functions used mostly for unit tests
@@ -563,7 +778,6 @@ public:
             sessions[i] = 0.0;
 
         computeTrainingStats();
-        // I don't evaluate level here because sleep might not be set yet
         return true;
     }
 
@@ -633,9 +847,11 @@ int getMenuChoice()
     int choice;
 
     cout << "\nMenu:\n";
-    cout << "  1) Evaluate Level\n";
-    cout << "  2) Training Plan\n";
-    cout << "  3) Recovery\n";
+    cout << "  1) Add Level Report\n";
+    cout << "  2) Add Training Plan Report\n";
+    cout << "  3) Add Recovery Report\n";
+    cout << "  4) Print All Saved Reports\n";
+    cout << "  5) Delete a Report\n";
     cout << "  0) Quit\n";
     cout << "Enter choice: ";
 
@@ -700,71 +916,53 @@ TEST_CASE("Composition: SessionStats default ctor is empty")
     CHECK(s.isEmpty() == true);
 }
 
-TEST_CASE("Composition: SessionStats setters/getters")
+TEST_CASE("Abstract: WeeklyReport is polymorphic via getType()")
 {
-    SessionStats s;
-    s.setSessionCount(3);
-    s.setTotalHours(6.0);
-    s.setAvgHours(2.0);
+    WeeklyReport* p1 = new TrainingPlanReport("Sam", 15, LEVEL_PRO, SessionStats(2, 4.0, 2.0), "High Tempo", 50.0, 30.0);
+    WeeklyReport* p2 = new RecoveryReport("Mike", 12, LEVEL_AMATEUR, SessionStats(1, 2.0, 2.0), "High", 2, "Aim for 8h sleep.");
 
-    CHECK(s.getSessionCount() == 3);
-    CHECK(s.getTotalHours() == doctest::Approx(6.0));
-    CHECK(s.getAvgHours() == doctest::Approx(2.0));
-    CHECK(s.isEmpty() == false);
+    CHECK(p1->getType() == "Training Plan");
+    CHECK(p2->getType() == "Recovery");
+
+    delete p1; // virtual base dtor
+    delete p2;
 }
 
-TEST_CASE("Base: WeeklyReport constructors initialize fields")
+TEST_CASE("Manager: add() grows size and resizes capacity")
 {
-    WeeklyReport w("Alex", 20, LEVEL_SEMI_PRO);
-    CHECK(w.getPlayerName() == "Alex");
-    CHECK(w.getAge() == 20);
-    CHECK(w.getLevel() == LEVEL_SEMI_PRO);
+    ReportManager m(1);
+    CHECK(m.getSize() == 0);
+    CHECK(m.getCapacity() == 1);
 
-    w.setSleepHours(7.5);
-    w.setReadinessScore(123.0);
-    w.setAdvice("Test advice");
+    CHECK(m.add(new LevelReport()) == true);
+    CHECK(m.getSize() == 1);
 
-    CHECK(w.getSleepHours() == doctest::Approx(7.5));
-    CHECK(w.getReadinessScore() == doctest::Approx(123.0));
-    CHECK(w.getAdvice() == "Test advice");
+    // triggers resize
+    CHECK(m.add(new LevelReport()) == true);
+    CHECK(m.getSize() == 2);
+    CHECK(m.getCapacity() >= 2);
 }
 
-TEST_CASE("Derived: TrainingPlanReport keeps base fields + derived fields")
+TEST_CASE("Manager: removeAt deletes and shifts")
 {
-    SessionStats stats(2, 4.0, 2.0);
+    ReportManager m(2);
 
-    TrainingPlanReport rpt("Sam", 15, LEVEL_PRO, stats, "High Tempo", 50.0, 30.0);
+    WeeklyReport* a = new LevelReport();
+    WeeklyReport* b = new LevelReport();
+    WeeklyReport* c = new LevelReport();
 
-    // base fields via base getters
-    CHECK(rpt.getPlayerName() == "Sam");
-    CHECK(rpt.getAge() == 15);
-    CHECK(rpt.getLevel() == LEVEL_PRO);
+    CHECK(m.add(a) == true);
+    CHECK(m.add(b) == true);
+    CHECK(m.add(c) == true);
+    CHECK(m.getSize() == 3);
 
-    // derived fields
-    CHECK(rpt.getFocus() == "High Tempo");
-    CHECK(rpt.getTechMins() == doctest::Approx(50.0));
-    CHECK(rpt.getCondMins() == doctest::Approx(30.0));
+    // remove middle
+    CHECK(m.removeAt(1) == true);
+    CHECK(m.getSize() == 2);
 
-    // composition inside derived
-    CHECK(rpt.getStats().getSessionCount() == 2);
-    CHECK(rpt.getStats().getTotalHours() == doctest::Approx(4.0));
-}
-
-TEST_CASE("Derived: RecoveryReport keeps base fields + derived fields")
-{
-    SessionStats stats(1, 2.0, 2.0);
-
-    RecoveryReport rpt("Mike", 12, LEVEL_AMATEUR, stats, "High", 2, "Aim for 8h sleep.");
-
-    CHECK(rpt.getPlayerName() == "Mike");
-    CHECK(rpt.getAge() == 12);
-    CHECK(rpt.getLevel() == LEVEL_AMATEUR);
-
-    CHECK(rpt.getFatigue() == "High");
-    CHECK(rpt.getRestDays() == 2);
-    CHECK(rpt.getTip() == "Aim for 8h sleep.");
-
-    CHECK(rpt.getStats().isEmpty() == false);
+    // after shift, index 1 should now be old 'c'
+    CHECK(m.getAt(1) != nullptr);
+    CHECK(m.getAt(1) == c);
 }
 
 TEST_CASE("TrainingLog: addSession updates stats (no cin)")
