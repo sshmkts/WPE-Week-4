@@ -1,9 +1,9 @@
 [![Unit Tests](https://github.com/sshmkts/WPE-Week-4/actions/workflows/tests.yml/badge.svg)](https://github.com/sshmkts/WPE-Week-4/actions/workflows/tests.yml)
 
-==============================================================
+
         WEEK 05 – WEEKLY PERFORMANCE EVALUATOR
                 (Upgrade from Week 04)
-==============================================================
+
 
 Author: Oleksandr Mykytsei
 --------------------------------------------------------------
