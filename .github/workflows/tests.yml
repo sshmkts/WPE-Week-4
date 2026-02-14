@@ -1,0 +1,26 @@
+name: C++ Unit Tests
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+
+    - name: Setup MSBuild
+      uses: microsoft/setup-msbuild@v1.1
+
+    - name: Build solution (Debug)
+      run: msbuild /p:Configuration=Debug
+
+    - name: Run tests
+      run: |
+        for /r %%i in (*.exe) do (
+          %%i
+        )
+      shell: cmd
