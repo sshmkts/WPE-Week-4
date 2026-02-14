@@ -1,83 +1,88 @@
 [![Unit Tests](https://github.com/sshmkts/WPE-Week-4/actions/workflows/tests.yml/badge.svg)](https://github.com/sshmkts/WPE-Week-4/actions/workflows/tests.yml)
 
-Week 05 – Weekly Performance Evaluator (Upgrade from Week 04)
+==============================================================
+        WEEK 05 – WEEKLY PERFORMANCE EVALUATOR
+                (Upgrade from Week 04)
+==============================================================
 
-Course: ITCS 2550
 Author: Oleksandr Mykytsei
-Term: Winter 2026
+--------------------------------------------------------------
+PROJECT OVERVIEW
+--------------------------------------------------------------
+This version upgrades Week 04 by implementing:
 
-What I did (Week 5 changes)
+• Abstract base class
+• Pure virtual function
+• Virtual destructor
+• Polymorphism
+• Dynamic memory management
+• Custom dynamic array (no STL)
 
-This week I upgraded my Week 04 project to use abstract classes, virtual functions, polymorphism, and dynamic memory.
+--------------------------------------------------------------
+CORE ARCHITECTURE
+--------------------------------------------------------------
 
-Main features
+ABSTRACT BASE:
+  Class: WeeklyReport
+    - virtual ~WeeklyReport()
+    - virtual string getType() const = 0
+    - virtual void print() const
 
-Abstract base class: WeeklyReport
+DERIVED CLASSES:
+  - LevelReport
+  - TrainingPlanReport
+  - RecoveryReport
 
-Has a virtual destructor
+COMPOSITION:
+  - SessionStats (stores session count, total, average)
 
-Has a pure virtual function: getType()
+MANAGER / CONTAINER:
+  Class: ReportManager
+    - WeeklyReport** items
+    - int size
+    - int capacity
+    - add()
+    - removeAt()
+    - resize()
+    - printAll()
 
-print() is virtual and used polymorphically
+Copying disabled (Rule of 3/5 safety):
+    ReportManager(const ReportManager&) = delete;
+    ReportManager& operator=(const ReportManager&) = delete;
 
-Derived classes:
+--------------------------------------------------------------
+PROGRAM FLOW
+--------------------------------------------------------------
+1) User enters weekly training data
+2) Program calculates:
+     - total hours
+     - average hours
+     - readiness score
+     - advice
+3) Menu options:
+     1) Add Level Report
+     2) Add Training Plan Report
+     3) Add Recovery Report
+     4) Print All Reports
+     5) Delete Report
+     0) Exit
 
-LevelReport
+--------------------------------------------------------------
+UNIT TESTS (_DEBUG)
+--------------------------------------------------------------
+• SessionStats validation
+• Polymorphism via base pointer
+• ReportManager add/remove/resize
+• TrainingLog stat updates
 
-TrainingPlanReport
+--------------------------------------------------------------
+MEMORY SAFETY
+--------------------------------------------------------------
+• All reports allocated with new
+• Manager owns and deletes objects
+• Base class has virtual destructor
+• No STL containers used
+• No memory leaks
 
-RecoveryReport
+==============================================================
 
-Composition:
-
-SessionStats is used inside derived reports to store session totals/averages
-
-Manager / container (no STL): ReportManager
-
-Stores WeeklyReport** items (dynamic array of base pointers)
-
-Tracks size and capacity
-
-Supports add, removeAt, resize
-
-Deletes all allocated objects (no memory leaks)
-
-Copying is disabled to avoid Rule of 3/5 problems
-
-How the program works
-
-User enters weekly training data (sessions + sleep).
-
-The program calculates training stats and readiness.
-
-Menu allows:
-
-Add Level Report
-
-Add Training Plan Report
-
-Add Recovery Report
-
-Print all saved reports (polymorphism)
-
-Delete a report
-
-Unit Tests
-
-In _DEBUG, the program runs doctest tests.
-
-Tests cover:
-
-SessionStats default behavior
-
-Polymorphism (getType() on base pointers)
-
-ReportManager add/remove/resize
-
-TrainingLog session logic (without cin)
-
-Notes
-
-All objects are created with new and cleaned using a virtual base destructor.
-
-main() runs only in Release mode (#ifndef _DEBUG).
