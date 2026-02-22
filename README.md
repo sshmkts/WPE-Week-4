@@ -1,91 +1,88 @@
 [![Unit Tests](https://github.com/sshmkts/WPE-Week-4/actions/workflows/tests.yml/badge.svg)](https://github.com/sshmkts/WPE-Week-4/actions/workflows/tests.yml)
 
-# Weekly Performance Evaluator (Week 04) — Inheritance + Composition
 
-This project is my Week 04 assignment for ITCS 2550.  
-It continues Week 03, but now the program is restructured using **inheritance** and **composition** (Chapter 11).
+        WEEK 05 – WEEKLY PERFORMANCE EVALUATOR
+                (Upgrade from Week 04)
 
-## What the program does
-The program tracks a player's weekly training:
-- asks for name, age, number of sessions, hours per session, and average sleep
-- calculates total/average training and a readiness score
-- shows different reports from a menu:
-  1) Level report  
-  2) Training plan report  
-  3) Recovery report  
 
-## Class design (Week 04 requirements)
+Author: Oleksandr Mykytsei
+--------------------------------------------------------------
+PROJECT OVERVIEW
+--------------------------------------------------------------
+This version upgrades Week 04 by implementing:
 
-### Base Class: `WeeklyReport`
-Contains the required base fields:
-- `string` player name  
-- `int` age  
-- `enum PlayerLevel` (Week 01 enum requirement)
+• Abstract base class
+• Pure virtual function
+• Virtual destructor
+• Polymorphism
+• Dynamic memory management
+• Custom dynamic array (no STL)
 
-Also includes:
-- default + parameterized constructors
-- getters/setters
-- `virtual print()` to display base info
-- `protected` member: `level` (used by derived classes)
+--------------------------------------------------------------
+CORE ARCHITECTURE
+--------------------------------------------------------------
 
-### Composition Class: `SessionStats`
-This class stores session summary:
-- session count
-- total hours
-- average hours
+ABSTRACT BASE:
+  Class: WeeklyReport
+    - virtual ~WeeklyReport()
+    - virtual string getType() const = 0
+    - virtual void print() const
 
-Includes:
-- constructors
-- getters/setters
-- helper method: `isEmpty()`
+DERIVED CLASSES:
+  - LevelReport
+  - TrainingPlanReport
+  - RecoveryReport
 
-### Derived Classes
-Both derived classes override `print()` and call `WeeklyReport::print()` first.
+COMPOSITION:
+  - SessionStats (stores session count, total, average)
 
-#### `TrainingPlanReport : public WeeklyReport`
-Adds:
-- focus (string)
-- technical minutes (double)
-- conditioning minutes (double)
-- composition member: `SessionStats stats`
+MANAGER / CONTAINER:
+  Class: ReportManager
+    - WeeklyReport** items
+    - int size
+    - int capacity
+    - add()
+    - removeAt()
+    - resize()
+    - printAll()
 
-#### `RecoveryReport : public WeeklyReport`
-Adds:
-- fatigue (string)
-- rest days (int)
-- tip (string)
-- composition member: `SessionStats stats`
+Copying disabled (Rule of 3/5 safety):
+    ReportManager(const ReportManager&) = delete;
+    ReportManager& operator=(const ReportManager&) = delete;
 
-### Manager Class: `TrainingLog`
-Handles user input/menu and creates the base/derived reports.
+--------------------------------------------------------------
+PROGRAM FLOW
+--------------------------------------------------------------
+1) User enters weekly training data
+2) Program calculates:
+     - total hours
+     - average hours
+     - readiness score
+     - advice
+3) Menu options:
+     1) Add Level Report
+     2) Add Training Plan Report
+     3) Add Recovery Report
+     4) Print All Reports
+     5) Delete Report
+     0) Exit
 
-## Unit Tests (doctest)
-This project includes **6+ doctest tests**, focused on:
-- constructors
-- getters/setters
-- composition class behavior (`SessionStats`)
-- derived classes keeping base + derived fields
-- `TrainingLog` stats updates using `addSession()`
+--------------------------------------------------------------
+UNIT TESTS (_DEBUG)
+--------------------------------------------------------------
+• SessionStats validation
+• Polymorphism via base pointer
+• ReportManager add/remove/resize
+• TrainingLog stat updates
 
-Tests run when `_DEBUG` is enabled.
+--------------------------------------------------------------
+MEMORY SAFETY
+--------------------------------------------------------------
+• All reports allocated with new
+• Manager owns and deletes objects
+• Base class has virtual destructor
+• No STL containers used
+• No memory leaks
 
-## How to run
+==============================================================
 
-### Program mode (Release)
-Run normally to use the menu and interactive input.
-
-### Test mode (Debug)
-Run in Debug to execute doctest unit tests.
-
-## GitHub Actions
-This repo includes a GitHub Actions workflow that runs tests on push.  
-The status badge should show passing when all tests succeed.
-
-## Class Diagram
-A Visual Studio **Class Diagram (.cd)** file is included in the repo to show:
-- inheritance (`WeeklyReport` → derived classes)
-- composition (`SessionStats` inside derived classes)
-
-## Notes
-- No magic numbers: constants are defined at the top.
-- Only topics up to Chapter 11 are used.
