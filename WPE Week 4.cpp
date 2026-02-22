@@ -1,9 +1,10 @@
-// Week 5 - Weekly Performance Evaluator (UPGRADE from Week 4)
-// This week: abstract classes + virtual functions + polymorphism + dynamic memory
-// Base class (abstract): WeeklyReport
-// Derived: LevelReport, TrainingPlanReport, RecoveryReport
-// Composition: SessionStats (inside derived)
-// Manager/container: ReportManager (dynamic array of WeeklyReport*)
+// Week 6 - Weekly Performance Evaluator (UPGRADE from Week 5)
+// This week: operator overloading + templates
+// - operator== (LevelReport)
+// - operator<< (polymorphic, calls virtual toStream())
+// - operator[] in Manager with bounds checking (no exceptions)
+// - operator+= / operator-= for add/remove
+// - function template + class template (replaces dynamic array logic)
 // Unit tests run in _DEBUG
 
 #ifdef _DEBUG
@@ -15,7 +16,17 @@
 #include <iomanip>
 #include <fstream>
 #include <string>
+#include <sstream> // Week 6: needed for << tests
 using namespace std;
+
+// --------------------
+// function template (Week 6)
+// --------------------
+template <typename T>
+T clampMin(T value, T minValue)
+{
+    return (value < minValue ? minValue : value);
+}
 
 // --------------------
 // constants (so I don't use magic numbers)
@@ -68,6 +79,98 @@ int getMenuChoice();
 string levelToString(PlayerLevel level);
 
 void printSessionsTable(const double sessions[], int sessionCount);
+
+// --------------------
+// Week 6: Class template (replaces Week 5 dynamic array logic)
+// --------------------
+template <typename T>
+class DynArray
+{
+private:
+    T* data;
+    int size;
+    int capacity;
+
+    void resize(int newCapacity)
+    {
+        if (newCapacity <= capacity) return;
+
+        T* newData = new T[newCapacity];
+
+        for (int i = 0; i < size; ++i)
+            newData[i] = data[i];
+
+        for (int i = size; i < newCapacity; ++i)
+            newData[i] = T(); // default value (nullptr for pointers)
+
+        delete[] data;
+        data = newData;
+        capacity = newCapacity;
+    }
+
+public:
+    DynArray(int initialCapacity = 2)
+    {
+        if (initialCapacity < 1) initialCapacity = 1;
+
+        capacity = initialCapacity;
+        size = 0;
+
+        data = new T[capacity];
+        for (int i = 0; i < capacity; ++i)
+            data[i] = T();
+    }
+
+    ~DynArray()
+    {
+        delete[] data;
+        data = nullptr;
+        size = 0;
+        capacity = 0;
+    }
+
+    // stop copying (safe for our assignment style)
+    DynArray(const DynArray&) = delete;
+    DynArray& operator=(const DynArray&) = delete;
+
+    int getSize() const { return size; }
+    int getCapacity() const { return capacity; }
+
+    bool pushBack(const T& value)
+    {
+        // explicit this pointer usage (Week 6 requirement)
+        if (this->size >= this->capacity)
+            this->resize(this->capacity * 2);
+
+        data[size] = value;
+        size++;
+        return true;
+    }
+
+    bool removeAt(int index)
+    {
+        if (index < 0 || index >= size) return false;
+
+        for (int i = index; i < size - 1; ++i)
+            data[i] = data[i + 1];
+
+        data[size - 1] = T();
+        size--;
+        return true;
+    }
+
+    // bounds check: return default value (nullptr for pointers)
+    T at(int index) const
+    {
+        if (index < 0 || index >= size) return T();
+        return data[index];
+    }
+
+    T operator[](int index) const
+    {
+        return at(index);
+    }
+};
 
 // --------------------
 // Composition class
@@ -145,14 +248,30 @@ public:
         advice = "";
     }
 
-    // Base is now ABSTRACT:
-    // - virtual destructor (for safe delete through base*)
-    // - at least 1 pure virtual function (forces derived override)
     virtual ~WeeklyReport() {}
 
-    virtual string getType() const = 0; // PURE VIRTUAL (required)
+    virtual string getType() const = 0; // PURE VIRTUAL
 
-    // prints the base info (virtual, still has implementation)
+    // Week 6: virtual method for polymorphic << output (one-line summary)
+    virtual void toStream(ostream& os) const
+    {
+        os << fixed << setprecision(2);
+        os << getType()
+            << " | Name=" << playerName
+            << " | Age=" << age
+            << " | Level=" << levelToString(level)
+            << " | Sleep=" << sleepHours
+            << " | Ready=" << readinessScore;
+    }
+
+    // operator<< (Week 6) uses polymorphism via toStream()
+    friend ostream& operator<<(ostream& os, const WeeklyReport& obj)
+    {
+        obj.toStream(os); // polymorphic call
+        return os;
+    }
+
+    // prints the base info (old multi-line print still exists)
     virtual void print() const
     {
         cout << "\n===== WEEKLY REPORT (" << getType() << ") =====\n";
@@ -175,13 +294,16 @@ public:
     void setPlayerName(const string& name) { playerName = name; }
     void setAge(int playerAge) { age = (playerAge < 0 ? 0 : playerAge); }
     void setLevel(PlayerLevel lvl) { level = lvl; }
-    void setSleepHours(double hours) { sleepHours = (hours < 0.0 ? 0.0 : hours); }
+
+    // Week 6: uses template function (same behavior as Week 5: negative -> 0)
+    void setSleepHours(double hours) { sleepHours = clampMin(hours, 0.0); }
+
     void setReadinessScore(double score) { readinessScore = score; }
     void setAdvice(const string& a) { advice = a; }
 };
 
 // --------------------
-// LevelReport (NEW derived) - replaces old "WeeklyReport base(...)" usage
+// LevelReport (derived)
 // --------------------
 class LevelReport : public WeeklyReport
 {
@@ -220,6 +342,32 @@ public:
     }
 
     string getType() const override { return "Level"; }
+
+    // Week 6: operator== for derived class
+    // Meaningful identity: name + age + level + sessionCount + totalTraining
+    bool operator==(const LevelReport& rhs) const
+    {
+        return (this->getPlayerName() == rhs.getPlayerName() &&
+            this->getAge() == rhs.getAge() &&
+            this->getLevel() == rhs.getLevel() &&
+            this->sessionCount == rhs.sessionCount &&
+            this->totalTraining == rhs.totalTraining);
+    }
+
+    // Week 6: override toStream for one-line derived summary
+    void toStream(ostream& os) const override
+    {
+        os << fixed << setprecision(2);
+        os << "Level"
+            << " | Name=" << getPlayerName()
+            << " | Age=" << getAge()
+            << " | Level=" << levelToString(getLevel())
+            << " | Sessions=" << sessionCount
+            << " | Total=" << totalTraining
+            << " | Avg=" << avgTraining
+            << " | Sleep=" << getSleepHours()
+            << " | Ready=" << getReadinessScore();
+    }
 
     void print() const override
     {
@@ -274,6 +422,19 @@ public:
     }
 
     string getType() const override { return "Training Plan"; }
+
+    void toStream(ostream& os) const override
+    {
+        os << fixed << setprecision(2);
+        os << "Training Plan"
+            << " | Name=" << getPlayerName()
+            << " | Level=" << levelToString(getLevel())
+            << " | Focus=" << focus
+            << " | Tech=" << techMins
+            << " | Cond=" << condMins
+            << " | Sleep=" << getSleepHours()
+            << " | Ready=" << getReadinessScore();
+    }
 
     SessionStats getStats() const { return stats; }
     string getFocus() const { return focus; }
@@ -332,6 +493,19 @@ public:
 
     string getType() const override { return "Recovery"; }
 
+    void toStream(ostream& os) const override
+    {
+        os << fixed << setprecision(2);
+        os << "Recovery"
+            << " | Name=" << getPlayerName()
+            << " | Level=" << levelToString(getLevel())
+            << " | Fatigue=" << fatigue
+            << " | RestDays=" << restDays
+            << " | Tip=" << tip
+            << " | Sleep=" << getSleepHours()
+            << " | Ready=" << getReadinessScore();
+    }
+
     SessionStats getStats() const { return stats; }
     string getFatigue() const { return fatigue; }
     int getRestDays() const { return restDays; }
@@ -357,31 +531,13 @@ public:
 };
 
 // --------------------
-// ReportManager (NEW) - dynamic array of base pointers
+// ReportManager (Week 6) - uses class template DynArray<WeeklyReport*>
+// + operator[] + += / -=
 // --------------------
 class ReportManager
 {
 private:
-    WeeklyReport** items; // dynamic array of base pointers
-    int size;
-    int capacity;
-
-    void resize(int newCapacity)
-    {
-        if (newCapacity <= capacity) return;
-
-        WeeklyReport** newItems = new WeeklyReport * [newCapacity];
-
-        for (int i = 0; i < size; ++i)
-            newItems[i] = items[i];
-
-        for (int i = size; i < newCapacity; ++i)
-            newItems[i] = nullptr;
-
-        delete[] items;
-        items = newItems;
-        capacity = newCapacity;
-    }
+    DynArray<WeeklyReport*> items; // template container
 
 public:
     // stop copying (Rule of 3/5)
@@ -389,93 +545,91 @@ public:
     ReportManager& operator=(const ReportManager&) = delete;
 
     ReportManager(int initialCapacity = 2)
+        : items(initialCapacity)
     {
-        if (initialCapacity < 1) initialCapacity = 1;
-        capacity = initialCapacity;
-        size = 0;
-
-        items = new WeeklyReport * [capacity];
-        for (int i = 0; i < capacity; ++i)
-            items[i] = nullptr;
     }
 
     ~ReportManager()
     {
         clear();
-        delete[] items;
-        items = nullptr;
-        capacity = 0;
     }
 
     void clear()
     {
-        for (int i = 0; i < size; ++i)
+        for (int i = 0; i < items.getSize(); ++i)
         {
-            delete items[i]; // safe because base has virtual destructor
-            items[i] = nullptr;
+            WeeklyReport* p = items[i];
+            delete p;
         }
-        size = 0;
+
+        while (items.getSize() > 0)
+            items.removeAt(items.getSize() - 1);
     }
 
-    int getSize() const { return size; }
-    int getCapacity() const { return capacity; }
+    int getSize() const { return items.getSize(); }
+    int getCapacity() const { return items.getCapacity(); }
+
+    // bounds checking operator[] (Week 6)
+    // rule: invalid index returns nullptr (no exception)
+    WeeklyReport* operator[](int index) const
+    {
+        return items.at(index);
+    }
 
     bool add(WeeklyReport* p)
     {
         if (p == nullptr) return false;
-
-        if (size >= capacity)
-            resize(capacity * 2);
-
-        items[size] = p;
-        size++;
-        return true;
+        return items.pushBack(p);
     }
 
     bool removeAt(int index)
     {
-        if (index < 0 || index >= size) return false;
+        WeeklyReport* p = items.at(index);
+        if (p == nullptr) return false;
 
-        delete items[index];
-        items[index] = nullptr;
-
-        for (int i = index; i < size - 1; ++i)
-            items[i] = items[i + 1];
-
-        items[size - 1] = nullptr;
-        size--;
-        return true;
+        delete p;
+        return items.removeAt(index);
     }
 
-    WeeklyReport* getAt(int index) const
+    // operator+= adds pointer (Week 6)
+    ReportManager& operator+=(WeeklyReport* p)
     {
-        if (index < 0 || index >= size) return nullptr;
-        return items[index];
+        // explicit this pointer usage (Week 6 requirement)
+        this->add(p);
+        return *this;
+    }
+
+    // operator-= removes by index (Week 6)
+    ReportManager& operator-=(int index)
+    {
+        this->removeAt(index);
+        return *this;
     }
 
     void printAll() const
     {
-        if (size == 0)
+        if (items.getSize() == 0)
         {
             cout << "\n(Manager) No reports saved yet.\n";
             return;
         }
 
         cout << "\n==============================\n";
-        cout << " SAVED REPORTS (" << size << ")\n";
+        cout << " SAVED REPORTS (" << items.getSize() << ")\n";
         cout << "==============================\n";
 
-        for (int i = 0; i < size; ++i)
+        for (int i = 0; i < items.getSize(); ++i)
         {
             cout << "\n[#" << (i + 1) << "]\n";
-            if (items[i] != nullptr)
-                items[i]->print(); // POLYMORPHIC call
+            WeeklyReport* p = items[i];
+            if (p != nullptr)
+                p->print();
         }
     }
 };
 
 // --------------------
-// TrainingLog (upgraded): uses ReportManager
+// TrainingLog (upgraded): uses ReportManager operators
 // --------------------
 class TrainingLog
 {
@@ -494,7 +648,7 @@ private:
     double readinessScore;
     string advice;
 
-    ReportManager manager; // owns all dynamically allocated reports
+    ReportManager manager;
 
     void computeTrainingStats()
     {
@@ -551,13 +705,12 @@ private:
         rpt->setReadinessScore(readinessScore);
         rpt->setAdvice(advice);
 
-        manager.add(rpt);
+        manager += rpt;
 
-        // optional file output
         ofstream out("report.txt");
         if (out)
         {
-            out << "WEEKLY PERFORMANCE REPORT (Week 5)\n";
+            out << "WEEKLY PERFORMANCE REPORT (Week 6)\n";
             out << "Section: LEVEL\n";
             out << "----------------------------------\n";
             out << left << setw(22) << "Player:" << right << setw(20) << name << "\n";
@@ -623,7 +776,7 @@ private:
         rpt->setReadinessScore(readinessScore);
         rpt->setAdvice(advice);
 
-        manager.add(rpt);
+        manager += rpt;
         cout << "\n(Training plan report added to manager)\n";
     }
 
@@ -660,7 +813,7 @@ private:
         rpt->setReadinessScore(readinessScore);
         rpt->setAdvice(advice);
 
-        manager.add(rpt);
+        manager += rpt;
         cout << "\n(Recovery report added to manager)\n";
     }
 
@@ -675,7 +828,11 @@ private:
         int idx = getValidInt("Enter report number to delete (1..N): ", 1);
         idx = idx - 1;
 
-        if (manager.removeAt(idx))
+        int before = manager.getSize();
+        manager -= idx;
+        int after = manager.getSize();
+
+        if (after < before)
             cout << "Deleted.\n";
         else
             cout << "Invalid index.\n";
@@ -683,7 +840,7 @@ private:
 
 public:
     TrainingLog()
-        : manager(2) // start small so resize can be demonstrated
+        : manager(2)
     {
         name = "";
         age = 0;
@@ -768,6 +925,8 @@ public:
     // functions used mostly for unit tests
     bool addSession(double hours)
     {
+        // FIXED (to match Week 5 behavior):
+        // negative is invalid -> do NOT clamp, return false
         if (hours < 0.0) return false;
         if (sessionCount >= MAX_SESSIONS) return false;
 
@@ -783,7 +942,8 @@ public:
 
     void setSleep(double hours)
     {
-        sleepHours = (hours < 0.0 ? 0.0 : hours);
+        // Week 6: still uses template function (same behavior as Week 5)
+        sleepHours = clampMin(hours, 0.0);
         evaluateLevel();
     }
 
@@ -907,6 +1067,52 @@ int main()
 #ifdef _DEBUG
 // doctest unit tests (run in _DEBUG)
 
+// ---------- Week 6: template function tests ----------
+TEST_CASE("Template function: clampMin works for int")
+{
+    CHECK(clampMin<int>(-5, 0) == 0);
+    CHECK(clampMin<int>(7, 0) == 7);
+}
+
+TEST_CASE("Template function: clampMin works for double")
+{
+    CHECK(clampMin<double>(-2.5, 0.0) == doctest::Approx(0.0));
+    CHECK(clampMin<double>(3.2, 0.0) == doctest::Approx(3.2));
+}
+
+// ---------- Week 6: template class tests ----------
+TEST_CASE("Template class: DynArray<int> stores and resizes")
+{
+    DynArray<int> a(1);
+    CHECK(a.getSize() == 0);
+    CHECK(a.getCapacity() == 1);
+
+    CHECK(a.pushBack(10) == true);
+    CHECK(a.getSize() == 1);
+
+    // trigger resize
+    CHECK(a.pushBack(20) == true);
+    CHECK(a.getSize() == 2);
+    CHECK(a.getCapacity() >= 2);
+    CHECK(a[0] == 10);
+    CHECK(a[1] == 20);
+}
+
+TEST_CASE("Template class: DynArray<int> removeAt shifts")
+{
+    DynArray<int> a(2);
+    a.pushBack(1);
+    a.pushBack(2);
+    a.pushBack(3);
+
+    CHECK(a.getSize() == 3);
+    CHECK(a.removeAt(1) == true);
+    CHECK(a.getSize() == 2);
+    CHECK(a[0] == 1);
+    CHECK(a[1] == 3);
+}
+
+// ---------- existing Week 5 tests that still apply ----------
 TEST_CASE("Composition: SessionStats default ctor is empty")
 {
     SessionStats s;
@@ -924,47 +1130,132 @@ TEST_CASE("Abstract: WeeklyReport is polymorphic via getType()")
     CHECK(p1->getType() == "Training Plan");
     CHECK(p2->getType() == "Recovery");
 
-    delete p1; // virtual base dtor
+    delete p1;
     delete p2;
 }
 
-TEST_CASE("Manager: add() grows size and resizes capacity")
+// ---------- Week 6: operator== tests ----------
+TEST_CASE("Equality operator: LevelReport equal objects")
+{
+    double s1[MAX_SESSIONS] = { 2.0, 4.0, 0,0,0 };
+    double s2[MAX_SESSIONS] = { 2.0, 4.0, 0,0,0 };
+
+    LevelReport a("Alex", 20, LEVEL_SEMI_PRO, s1, 2, 6.0, 3.0);
+    LevelReport b("Alex", 20, LEVEL_SEMI_PRO, s2, 2, 6.0, 3.0);
+
+    CHECK(a == b);
+}
+
+TEST_CASE("Equality operator: LevelReport not equal objects")
+{
+    double s1[MAX_SESSIONS] = { 2.0, 4.0, 0,0,0 };
+    double s2[MAX_SESSIONS] = { 3.0, 4.0, 0,0,0 };
+
+    LevelReport a("Alex", 20, LEVEL_SEMI_PRO, s1, 2, 6.0, 3.0);
+    LevelReport b("Alex", 20, LEVEL_SEMI_PRO, s2, 2, 7.0, 3.5);
+
+    CHECK(!(a == b));
+}
+
+// ---------- Week 6: operator<< tests using ostringstream ----------
+TEST_CASE("Stream output: << prints one-line summary (polymorphic)")
+{
+    WeeklyReport* p = new RecoveryReport("Mike", 12, LEVEL_AMATEUR, SessionStats(1, 2.0, 2.0), "High", 2, "Aim for 8h sleep.");
+    p->setSleepHours(6.5);
+    p->setReadinessScore(10.0);
+
+    ostringstream oss;
+    oss << *p;
+
+    CHECK(oss.str().find("Recovery | Name=Mike") != string::npos);
+
+    delete p;
+}
+
+TEST_CASE("Stream output: << works for LevelReport")
+{
+    double s1[MAX_SESSIONS] = { 2.0, 4.0, 0,0,0 };
+    WeeklyReport* p = new LevelReport("Alex", 20, LEVEL_SEMI_PRO, s1, 2, 6.0, 3.0);
+    p->setSleepHours(8.0);
+    p->setReadinessScore(25.0);
+
+    ostringstream oss;
+    oss << *p;
+
+    CHECK(oss.str().find("Level | Name=Alex") != string::npos);
+    CHECK(oss.str().find("Sessions=2") != string::npos);
+
+    delete p;
+}
+
+// ---------- Week 6: manager [] tests ----------
+TEST_CASE("Indexing: operator[] valid index returns correct pointer")
+{
+    ReportManager m(1);
+    WeeklyReport* a = new LevelReport();
+    WeeklyReport* b = new LevelReport();
+
+    m += a;
+    m += b;
+
+    CHECK(m.getSize() == 2);
+    CHECK(m[0] == a);
+    CHECK(m[1] == b);
+}
+
+TEST_CASE("Indexing: operator[] invalid index returns nullptr")
 {
     ReportManager m(1);
     CHECK(m.getSize() == 0);
-    CHECK(m.getCapacity() == 1);
-
-    CHECK(m.add(new LevelReport()) == true);
-    CHECK(m.getSize() == 1);
-
-    // triggers resize
-    CHECK(m.add(new LevelReport()) == true);
-    CHECK(m.getSize() == 2);
-    CHECK(m.getCapacity() >= 2);
+    CHECK(m[0] == nullptr);
+    CHECK(m[-1] == nullptr);
 }
 
-TEST_CASE("Manager: removeAt deletes and shifts")
+TEST_CASE("Add operator: += increases size and preserves order")
 {
-    ReportManager m(2);
+    ReportManager m(1);
+
+    WeeklyReport* a = new LevelReport();
+    WeeklyReport* b = new LevelReport();
+
+    CHECK(m.getSize() == 0);
+
+    m += a;
+    CHECK(m.getSize() == 1);
+    CHECK(m[0] == a);
+
+    m += b;
+    CHECK(m.getSize() == 2);
+    CHECK(m[0] == a);
+    CHECK(m[1] == b);
+}
+
+// ---------- Week 6: += and -= tests ----------
+TEST_CASE("Add/Remove operators: += adds, -= removes and shifts")
+{
+    ReportManager m(1);
 
     WeeklyReport* a = new LevelReport();
     WeeklyReport* b = new LevelReport();
     WeeklyReport* c = new LevelReport();
 
-    CHECK(m.add(a) == true);
-    CHECK(m.add(b) == true);
-    CHECK(m.add(c) == true);
+    m += a;
+    m += b;
+    m += c;
+
     CHECK(m.getSize() == 3);
+    CHECK(m[0] == a);
+    CHECK(m[1] == b);
+    CHECK(m[2] == c);
 
-    // remove middle
-    CHECK(m.removeAt(1) == true);
+    m -= 1;
+
     CHECK(m.getSize() == 2);
-
-    // after shift, index 1 should now be old 'c'
-    CHECK(m.getAt(1) != nullptr);
-    CHECK(m.getAt(1) == c);
+    CHECK(m[0] == a);
+    CHECK(m[1] == c);
 }
 
+// ---------- TrainingLog tests (fixed back to Week 5 behavior) ----------
 TEST_CASE("TrainingLog: addSession updates stats (no cin)")
 {
     TrainingLog log;
@@ -981,7 +1272,7 @@ TEST_CASE("TrainingLog: addSession updates stats (no cin)")
     CHECK(log.getAverageHours() == doctest::Approx(3.0));
 }
 
-TEST_CASE("TrainingLog: addSession guard cases")
+TEST_CASE("TrainingLog: addSession guard cases (negative is invalid)")
 {
     TrainingLog log;
 
