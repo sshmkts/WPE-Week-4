@@ -1,101 +1,74 @@
 [![Unit Tests](https://github.com/sshmkts/WPE-Week-4/actions/workflows/tests.yml/badge.svg)](https://github.com/sshmkts/WPE-Week-4/actions/workflows/tests.yml)
-# Weekly Performance Evaluator — Week 06
+# Weekly Performance Evaluator  
+## Week 07 – Exception Handling Upgrade
 
-This project is my **Week 06 Programming Assignment** for ITCS 2550.  
-It builds on Week 05 and introduces **operator overloading** and **C++ templates** (Chapter 13).
+### Overview
+This project is an upgrade of the Week 06 codebase.  
+The purpose of Week 07 is to implement C++ exception handling (Chapter 14) while preserving all existing functionality.
 
----
-
-## ✅ What the program does
-The program tracks a player's weekly training and generates different reports:
-- Level report
-- Training plan report
-- Recovery report
-
-The user can:
-- add reports
-- print all saved reports
-- delete reports
-- store multiple reports dynamically
+Only the required portions of the code were modified. The diff clearly reflects exception-related changes.
 
 ---
 
-## ✅ Week 06 Concepts Implemented
+## 🔹 Key Concepts Implemented (Chapter 14)
 
-### Operator Overloading
-The following operators were implemented:
+### 1. Custom Exception
+A custom exception class `AppException` was created.
 
-- **operator== (LevelReport)**  
-  Two reports are equal when identity fields match (name, age, level, sessions, total training).
+- Derived from `std::runtime_error`
+- Stores an error message
+- Uses `what()` for reporting
 
-- **operator<< (WeeklyReport)**  
-  Outputs a clean one-line summary using polymorphism via `toStream()`.
-
-- **operator[] (ReportManager)**  
-  Provides safe indexing with bounds checking.  
-  Invalid index returns `nullptr` (no exceptions used).
-
-- **operator+= (ReportManager)**  
-  Adds a report pointer to the container and resizes dynamically if needed.
-
-- **operator-= (ReportManager)**  
-  Removes a report by index, deletes the object, and shifts remaining items.
+This ensures meaningful and consistent error handling across the program.
 
 ---
 
-### Templates
-- **Function template:**  
-  `clampMin<T>()` ensures values do not go below a minimum.
+### 2. Template Container Safety (DynArray<T>)
 
-- **Class template:**  
-  `DynArray<T>` replaces the Week 05 dynamic array logic and provides:
-  - dynamic resizing
-  - add/remove
-  - safe indexing
-  - generic storage
+The template class now enforces safe access:
 
-Ownership of dynamic memory remains in `ReportManager`.
+- `at(index)` throws `AppException` if index is invalid
+- `operator[]` delegates to `at()` and throws on invalid index
+- `removeAt(index)` throws if index is invalid
+
+This prevents undefined behavior and protects memory integrity.
 
 ---
 
-## ✅ OOP Design
-- **Abstract base class:** `WeeklyReport`
-- **Derived classes:** `LevelReport`, `TrainingPlanReport`, `RecoveryReport`
-- **Composition:** `SessionStats` used inside derived reports
-- **Manager class:** `ReportManager` manages dynamic report storage
-- **Template container:** `DynArray<WeeklyReport*>`
-- **Enum:** `PlayerLevel`
+### 3. Manager Operator Requirements
+
+`ReportManager` now:
+
+- `operator[]` throws on invalid index
+- `operator-=` throws on invalid removal
+
+All validation logic is delegated to the underlying template container.
 
 ---
 
-## ✅ Unit Tests (doctest)
-New tests were added for:
-- equality operator
-- stream output operator
-- indexing operator
-- add/remove operators
-- template function
-- template class
+### 4. try/catch in User Interface
 
-All tests pass in `_DEBUG` mode.
+User-driven deletion is wrapped in a `try/catch` block.
+
+This prevents program crashes due to invalid input and ensures controlled error handling.
 
 ---
 
-## ✅ How to run
-### Run program
-Compile in **Release mode** and run normally.
+## 🔹 Unit Testing (doctest)
 
-### Run tests
-Compile in **Debug mode** to execute doctest unit tests.
+Existing tests from previous weeks remain intact.
 
----
+New tests were added to verify:
+- Invalid indexing throws exceptions
+- Invalid removal throws exceptions
+- Manager operator[] throws correctly
+- Manager operator-= throws correctly
 
-## ✅ Notes
-- Only concepts up to Chapter 13 were used.
-- STL containers were not used.
-- Dynamic memory is safely managed through `ReportManager`.
+`CHECK_THROWS_AS` is used to confirm exception types.
 
 ---
 
-## ✅ Git Tag
-The commit for this assignment is tagged:
+## 🔹 Memory Safety Verification (CRT)
+
+Since dynamic memory is used (`new` / `delete`), the program verifies memory safety using:
+
