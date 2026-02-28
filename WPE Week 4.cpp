@@ -1,22 +1,30 @@
-// Week 6 - Weekly Performance Evaluator (UPGRADE from Week 5)
-// This week: operator overloading + templates
-// - operator== (LevelReport)
-// - operator<< (polymorphic, calls virtual toStream())
-// - operator[] in Manager with bounds checking (no exceptions)
-// - operator+= / operator-= for add/remove
-// - function template + class template (replaces dynamic array logic)
-// Unit tests run in _DEBUG
+// Week 7 - Weekly Performance Evaluator (UPGRADE from Week 6)
+// This week: C++ Exceptions (Chapter 14)
+// Requirements implemented:
+// - operator[] must throw on invalid index
+// - operator-= must throw on invalid removal
+// - Template class must throw on invalid access/removal
+// - At least one custom exception (AppException)
+// - Update doctests for exceptions
+// - CRT memory leak verification output (debug)
+// NOTE: Minimal behavior changes to only the required parts.
 
 #ifdef _DEBUG
-#define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
+#define DOCTEST_CONFIG_IMPLEMENT
 #include "doctest.h"
 #endif
+
+#define _CRTDBG_MAP_ALLOC
+#include <crtdbg.h>
 
 #include <iostream>
 #include <iomanip>
 #include <fstream>
 #include <string>
-#include <sstream> // Week 6: needed for << tests
+#include <sstream>
+#include <stdexcept>
+#include <exception>
+
 using namespace std;
 
 // --------------------
@@ -81,7 +89,21 @@ string levelToString(PlayerLevel level);
 void printSessionsTable(const double sessions[], int sessionCount);
 
 // --------------------
-// Week 6: Class template (replaces Week 5 dynamic array logic)
+// Week 7: Custom exception (requirement)
+// --------------------
+class AppException : public std::runtime_error
+{
+public:
+    explicit AppException(const std::string& msg)
+        : std::runtime_error(msg) {}
+};
+
+// --------------------
+// Week 6/7: Class template (replaces Week 5 dynamic array logic)
+// Week 7 changes:
+// - at() throws on invalid index
+// - operator[] throws on invalid index
+// - removeAt() throws on invalid removal
 // --------------------
 template <typename T>
 class DynArray
@@ -147,9 +169,11 @@ public:
         return true;
     }
 
+    // Week 7: throw on invalid removal
     bool removeAt(int index)
     {
-        if (index < 0 || index >= size) return false;
+        if (index < 0 || index >= size)
+            throw AppException("DynArray: invalid index in removeAt");
 
         for (int i = index; i < size - 1; ++i)
             data[i] = data[i + 1];
@@ -159,13 +183,15 @@ public:
         return true;
     }
 
-    // bounds check: return default value (nullptr for pointers)
+    // Week 7: throw on invalid index
     T at(int index) const
     {
-        if (index < 0 || index >= size) return T();
+        if (index < 0 || index >= size)
+            throw AppException("DynArray: invalid index in at");
         return data[index];
     }
 
+    // Week 7: operator[] throws (via at)
     T operator[](int index) const
     {
         return at(index);
@@ -531,8 +557,10 @@ public:
 };
 
 // --------------------
-// ReportManager (Week 6) - uses class template DynArray<WeeklyReport*>
-// + operator[] + += / -=
+// ReportManager (Week 6/7) - uses DynArray<WeeklyReport*>
+// Week 7 changes:
+// - operator[] throws on invalid index
+// - operator-= throws on invalid removal (via DynArray throwing)
 // --------------------
 class ReportManager
 {
@@ -558,22 +586,21 @@ public:
     {
         for (int i = 0; i < items.getSize(); ++i)
         {
-            WeeklyReport* p = items[i];
+            WeeklyReport* p = items[i]; // valid indices, no throw here
             delete p;
         }
 
         while (items.getSize() > 0)
-            items.removeAt(items.getSize() - 1);
+            items.removeAt(items.getSize() - 1); // valid, no throw
     }
 
     int getSize() const { return items.getSize(); }
     int getCapacity() const { return items.getCapacity(); }
 
-    // bounds checking operator[] (Week 6)
-    // rule: invalid index returns nullptr (no exception)
+    // Week 7: operator[] must throw on invalid index
     WeeklyReport* operator[](int index) const
     {
-        return items.at(index);
+        return items.at(index); // throws AppException if invalid
     }
 
     bool add(WeeklyReport* p)
@@ -584,11 +611,9 @@ public:
 
     bool removeAt(int index)
     {
-        WeeklyReport* p = items.at(index);
-        if (p == nullptr) return false;
-
+        WeeklyReport* p = items.at(index); // throws if invalid
         delete p;
-        return items.removeAt(index);
+        return items.removeAt(index);      // also throws if invalid (index already valid)
     }
 
     // operator+= adds pointer (Week 6)
@@ -599,10 +624,10 @@ public:
         return *this;
     }
 
-    // operator-= removes by index (Week 6)
+    // Week 7: operator-= must throw on invalid removal
     ReportManager& operator-=(int index)
     {
-        this->removeAt(index);
+        this->removeAt(index); // will throw AppException if invalid
         return *this;
     }
 
@@ -710,7 +735,7 @@ private:
         ofstream out("report.txt");
         if (out)
         {
-            out << "WEEKLY PERFORMANCE REPORT (Week 6)\n";
+            out << "WEEKLY PERFORMANCE REPORT (Week 7)\n";
             out << "Section: LEVEL\n";
             out << "----------------------------------\n";
             out << left << setw(22) << "Player:" << right << setw(20) << name << "\n";
@@ -817,6 +842,7 @@ private:
         cout << "\n(Recovery report added to manager)\n";
     }
 
+    // Week 7: UI catches exceptions so program doesn't crash
     void deleteReport()
     {
         if (manager.getSize() == 0)
@@ -828,14 +854,15 @@ private:
         int idx = getValidInt("Enter report number to delete (1..N): ", 1);
         idx = idx - 1;
 
-        int before = manager.getSize();
-        manager -= idx;
-        int after = manager.getSize();
-
-        if (after < before)
+        try
+        {
+            manager -= idx; // throws on invalid removal
             cout << "Deleted.\n";
-        else
-            cout << "Invalid index.\n";
+        }
+        catch (const std::exception& ex)
+        {
+            cout << "Invalid index. " << ex.what() << "\n";
+        }
     }
 
 public:
@@ -1080,7 +1107,7 @@ TEST_CASE("Template function: clampMin works for double")
     CHECK(clampMin<double>(3.2, 0.0) == doctest::Approx(3.2));
 }
 
-// ---------- Week 6: template class tests ----------
+// ---------- Week 6: template class tests that still apply ----------
 TEST_CASE("Template class: DynArray<int> stores and resizes")
 {
     DynArray<int> a(1);
@@ -1110,6 +1137,26 @@ TEST_CASE("Template class: DynArray<int> removeAt shifts")
     CHECK(a.getSize() == 2);
     CHECK(a[0] == 1);
     CHECK(a[1] == 3);
+}
+
+// ---------- Week 7: template class throws ----------
+TEST_CASE("Week 7: DynArray throws on invalid index")
+{
+    DynArray<int> a(1);
+    a.pushBack(10);
+
+    CHECK_THROWS_AS(a.at(-1), AppException);
+    CHECK_THROWS_AS(a.at(1), AppException);
+    CHECK_THROWS_AS(a[-1], AppException);
+}
+
+TEST_CASE("Week 7: DynArray throws on invalid removeAt")
+{
+    DynArray<int> a(1);
+    a.pushBack(10);
+
+    CHECK_THROWS_AS(a.removeAt(-1), AppException);
+    CHECK_THROWS_AS(a.removeAt(1), AppException);
 }
 
 // ---------- existing Week 5 tests that still apply ----------
@@ -1188,7 +1235,7 @@ TEST_CASE("Stream output: << works for LevelReport")
     delete p;
 }
 
-// ---------- Week 6: manager [] tests ----------
+// ---------- Week 6: manager [] tests (valid index) ----------
 TEST_CASE("Indexing: operator[] valid index returns correct pointer")
 {
     ReportManager m(1);
@@ -1203,12 +1250,14 @@ TEST_CASE("Indexing: operator[] valid index returns correct pointer")
     CHECK(m[1] == b);
 }
 
-TEST_CASE("Indexing: operator[] invalid index returns nullptr")
+// ---------- Week 7: manager [] throws on invalid index ----------
+TEST_CASE("Week 7: ReportManager operator[] throws on invalid index")
 {
     ReportManager m(1);
     CHECK(m.getSize() == 0);
-    CHECK(m[0] == nullptr);
-    CHECK(m[-1] == nullptr);
+
+    CHECK_THROWS_AS(m[0], AppException);
+    CHECK_THROWS_AS(m[-1], AppException);
 }
 
 TEST_CASE("Add operator: += increases size and preserves order")
@@ -1230,7 +1279,7 @@ TEST_CASE("Add operator: += increases size and preserves order")
     CHECK(m[1] == b);
 }
 
-// ---------- Week 6: += and -= tests ----------
+// ---------- Week 6: += and -= tests (valid removal still works) ----------
 TEST_CASE("Add/Remove operators: += adds, -= removes and shifts")
 {
     ReportManager m(1);
@@ -1253,6 +1302,14 @@ TEST_CASE("Add/Remove operators: += adds, -= removes and shifts")
     CHECK(m.getSize() == 2);
     CHECK(m[0] == a);
     CHECK(m[1] == c);
+}
+
+// ---------- Week 7: operator-= throws on invalid removal ----------
+TEST_CASE("Week 7: ReportManager operator-= throws on invalid removal")
+{
+    ReportManager m(1);
+    CHECK_THROWS_AS(m -= 0, AppException);
+    CHECK_THROWS_AS(m -= -1, AppException);
 }
 
 // ---------- TrainingLog tests (fixed back to Week 5 behavior) ----------
@@ -1285,5 +1342,26 @@ TEST_CASE("TrainingLog: addSession guard cases (negative is invalid)")
     CHECK(log.getSessionCount() == MAX_SESSIONS);
     CHECK(log.addSession(1.0) == false);
 }
+
+#ifdef _DEBUG
+int main(int argc, char** argv)
+{
+    // Run doctest
+    doctest::Context ctx;
+    ctx.applyCommandLine(argc, argv);
+    int res = ctx.run();
+
+    // CRT leak check (AFTER tests finish)
+    int flags = _CrtSetDbgFlag(_CRTDBG_REPORT_FLAG);
+    flags |= _CRTDBG_ALLOC_MEM_DF;
+    flags |= _CRTDBG_LEAK_CHECK_DF;
+    _CrtSetDbgFlag(flags);
+
+    int leaks = _CrtDumpMemoryLeaks(); // 0 = no leaks, 1 = leaks
+    std::cout << "\nCRT DumpMemoryLeaks result = " << leaks << "\n";
+
+    return res;
+}
+#endif
 
 #endif
