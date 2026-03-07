@@ -1,74 +1,83 @@
 [![Unit Tests](https://github.com/sshmkts/WPE-Week-4/actions/workflows/tests.yml/badge.svg)](https://github.com/sshmkts/WPE-Week-4/actions/workflows/tests.yml)
-# Weekly Performance Evaluator  
-## Week 07 – Exception Handling Upgrade
+Weekly Performance Evaluator
+Week 08 – Recursion Upgrade
+Overview
 
-### Overview
-This project is an upgrade of the Week 06 codebase.  
-The purpose of Week 07 is to implement C++ exception handling (Chapter 14) while preserving all existing functionality.
+This project is an upgrade of the Week 07 codebase.
+The purpose of Week 08 is to implement C++ recursion (Chapter 15) while preserving all existing functionality.
 
-Only the required portions of the code were modified. The diff clearly reflects exception-related changes.
+Only the required portions of the code were modified. The code diff clearly reflects recursion-related changes.
 
----
+🔹 Key Concepts Implemented (Chapter 15)
+1. Recursive Member Function
 
-## 🔹 Key Concepts Implemented (Chapter 14)
+A recursive function was added to the ReportManager class.
 
-### 1. Custom Exception
-A custom exception class `AppException` was created.
+countReportsOfType(string type)
 
-- Derived from `std::runtime_error`
-- Stores an error message
-- Uses `what()` for reporting
+This function counts how many stored reports match a specific report type.
 
-This ensures meaningful and consistent error handling across the program.
+The implementation follows proper recursion design:
 
----
+Base case: when the index reaches the end of the container
 
-### 2. Template Container Safety (DynArray<T>)
+Recursive case: check the current element and recursively evaluate the next element
 
-The template class now enforces safe access:
+No loops (for, while, do-while) are used inside the recursive function.
 
-- `at(index)` throws `AppException` if index is invalid
-- `operator[]` delegates to `at()` and throws on invalid index
-- `removeAt(index)` throws if index is invalid
+2. Recursive Helper Function
 
-This prevents undefined behavior and protects memory integrity.
+To support recursion, a private helper function was implemented:
 
----
+countTypeRecursive(string type, int index)
 
-### 3. Manager Operator Requirements
+This helper allows the algorithm to move through the container one element at a time using recursion.
 
-`ReportManager` now:
+3. Integration With Existing Architecture
 
-- `operator[]` throws on invalid index
-- `operator-=` throws on invalid removal
+The recursive logic integrates with the existing project design:
 
-All validation logic is delegated to the underlying template container.
+Uses the DynArray template container
 
----
+Accesses reports via polymorphic WeeklyReport pointers
 
-### 4. try/catch in User Interface
+Uses getType() to determine the report category
 
-User-driven deletion is wrapped in a `try/catch` block.
+This keeps the recursion implementation consistent with the current object-oriented structure.
 
-This prevents program crashes due to invalid input and ensures controlled error handling.
-
----
-
-## 🔹 Unit Testing (doctest)
+🔹 Unit Testing (doctest)
 
 Existing tests from previous weeks remain intact.
 
-New tests were added to verify:
-- Invalid indexing throws exceptions
-- Invalid removal throws exceptions
-- Manager operator[] throws correctly
-- Manager operator-= throws correctly
+New tests were added to verify the recursion behavior:
 
-`CHECK_THROWS_AS` is used to confirm exception types.
+Counting reports when the manager is empty
 
----
+Counting multiple report types
 
-## 🔹 Memory Safety Verification (CRT)
+Ensuring correct totals are returned
 
-Since dynamic memory is used (`new` / `delete`), the program verifies memory safety using:
+These tests confirm that both the base case and recursive case function correctly.
+
+🔹 Memory Safety Verification (CRT)
+
+The project continues to verify memory safety using the CRT debug library.
+
+Dynamic memory (new / delete) is monitored using:
+
+_CrtDumpMemoryLeaks()
+
+The debug output confirms that no memory leaks are present after running the unit tests.
+
+🔹 Git Repository Tag
+
+The repository commit for this assignment is tagged:
+
+Week08 Programming Assignment
+
+This tag marks the exact version of the code used for the Week 08 submission.
+
+Author
+
+Oleksandr Mykytsei
 
