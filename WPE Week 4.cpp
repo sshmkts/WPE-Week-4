@@ -1,13 +1,14 @@
-// Week 7 - Weekly Performance Evaluator (UPGRADE from Week 6)
-// This week: C++ Exceptions (Chapter 14)
-// Requirements implemented:
-// - operator[] must throw on invalid index
-// - operator-= must throw on invalid removal
-// - Template class must throw on invalid access/removal
-// - At least one custom exception (AppException)
-// - Update doctests for exceptions
+// Week 8 - Weekly Performance Evaluator (UPGRADE from Week 7)
+// This week: C++ Recursion (Chapter 15)
+// Week 8 Requirements implemented:
+// - Add/modify a recursive member function (NO LOOPS inside)
+// - Clear base case + recursive case
+// - Must be a class member function
+// - Update doctests for recursion (keep old tests, add new)
+// - Update class diagram (add new methods to ReportManager)
+// - Show diff in video
 // - CRT memory leak verification output (debug)
-// NOTE: Minimal behavior changes to only the required parts.
+// - Tag repo "Week08 Programming Assignment"
 
 #ifdef _DEBUG
 #define DOCTEST_CONFIG_IMPLEMENT
@@ -56,7 +57,6 @@ const int MIN_AGE = 1;
 const double MIN_TRAINING_HOURS = 0.0;
 const double MIN_SLEEP_HOURS = 0.01;
 
-// menu now includes add/print/delete
 const int MENU_MIN_CHOICE = 0;
 const int MENU_MAX_CHOICE = 5;
 
@@ -73,7 +73,7 @@ const int REST_DAYS_HIGH = 2;
 const int REST_DAYS_MODERATE = 1;
 const int REST_DAYS_LOW = 0;
 
-// player level enum (from Week 1 requirement)
+// player level enum
 enum PlayerLevel { LEVEL_AMATEUR, LEVEL_SEMI_PRO, LEVEL_PRO };
 
 // helper functions for input/output
@@ -89,7 +89,7 @@ string levelToString(PlayerLevel level);
 void printSessionsTable(const double sessions[], int sessionCount);
 
 // --------------------
-// Week 7: Custom exception (requirement)
+// Week 7: Custom exception
 // --------------------
 class AppException : public std::runtime_error
 {
@@ -99,11 +99,7 @@ public:
 };
 
 // --------------------
-// Week 6/7: Class template (replaces Week 5 dynamic array logic)
-// Week 7 changes:
-// - at() throws on invalid index
-// - operator[] throws on invalid index
-// - removeAt() throws on invalid removal
+// Week 6/7: Class template
 // --------------------
 template <typename T>
 class DynArray
@@ -123,7 +119,7 @@ private:
             newData[i] = data[i];
 
         for (int i = size; i < newCapacity; ++i)
-            newData[i] = T(); // default value (nullptr for pointers)
+            newData[i] = T();
 
         delete[] data;
         data = newData;
@@ -151,7 +147,6 @@ public:
         capacity = 0;
     }
 
-    // stop copying (safe for our assignment style)
     DynArray(const DynArray&) = delete;
     DynArray& operator=(const DynArray&) = delete;
 
@@ -160,7 +155,6 @@ public:
 
     bool pushBack(const T& value)
     {
-        // explicit this pointer usage (Week 6 requirement)
         if (this->size >= this->capacity)
             this->resize(this->capacity * 2);
 
@@ -169,7 +163,6 @@ public:
         return true;
     }
 
-    // Week 7: throw on invalid removal
     bool removeAt(int index)
     {
         if (index < 0 || index >= size)
@@ -183,7 +176,6 @@ public:
         return true;
     }
 
-    // Week 7: throw on invalid index
     T at(int index) const
     {
         if (index < 0 || index >= size)
@@ -191,7 +183,6 @@ public:
         return data[index];
     }
 
-    // Week 7: operator[] throws (via at)
     T operator[](int index) const
     {
         return at(index);
@@ -243,12 +234,11 @@ public:
 class WeeklyReport
 {
 protected:
-    PlayerLevel level; // protected so child classes can access
+    PlayerLevel level;
 
 private:
     string playerName;
     int age;
-
     double sleepHours;
     double readinessScore;
     string advice;
@@ -276,9 +266,8 @@ public:
 
     virtual ~WeeklyReport() {}
 
-    virtual string getType() const = 0; // PURE VIRTUAL
+    virtual string getType() const = 0;
 
-    // Week 6: virtual method for polymorphic << output (one-line summary)
     virtual void toStream(ostream& os) const
     {
         os << fixed << setprecision(2);
@@ -290,14 +279,12 @@ public:
             << " | Ready=" << readinessScore;
     }
 
-    // operator<< (Week 6) uses polymorphism via toStream()
     friend ostream& operator<<(ostream& os, const WeeklyReport& obj)
     {
-        obj.toStream(os); // polymorphic call
+        obj.toStream(os);
         return os;
     }
 
-    // prints the base info (old multi-line print still exists)
     virtual void print() const
     {
         cout << "\n===== WEEKLY REPORT (" << getType() << ") =====\n";
@@ -309,7 +296,6 @@ public:
         cout << "Advice: " << advice << "\n";
     }
 
-    // basic getters/setters
     string getPlayerName() const { return playerName; }
     int getAge() const { return age; }
     PlayerLevel getLevel() const { return level; }
@@ -321,21 +307,19 @@ public:
     void setAge(int playerAge) { age = (playerAge < 0 ? 0 : playerAge); }
     void setLevel(PlayerLevel lvl) { level = lvl; }
 
-    // Week 6: uses template function (same behavior as Week 5: negative -> 0)
     void setSleepHours(double hours) { sleepHours = clampMin(hours, 0.0); }
-
     void setReadinessScore(double score) { readinessScore = score; }
     void setAdvice(const string& a) { advice = a; }
 };
 
 // --------------------
-// LevelReport (derived)
+// LevelReport
 // --------------------
 class LevelReport : public WeeklyReport
 {
 private:
-    SessionStats stats;            // composition
-    double sessions[MAX_SESSIONS]; // store per-session hours
+    SessionStats stats;
+    double sessions[MAX_SESSIONS];
     int sessionCount;
     double totalTraining;
     double avgTraining;
@@ -369,8 +353,6 @@ public:
 
     string getType() const override { return "Level"; }
 
-    // Week 6: operator== for derived class
-    // Meaningful identity: name + age + level + sessionCount + totalTraining
     bool operator==(const LevelReport& rhs) const
     {
         return (this->getPlayerName() == rhs.getPlayerName() &&
@@ -380,7 +362,6 @@ public:
             this->totalTraining == rhs.totalTraining);
     }
 
-    // Week 6: override toStream for one-line derived summary
     void toStream(ostream& os) const override
     {
         os << fixed << setprecision(2);
@@ -409,7 +390,6 @@ public:
         printSessionsTable(sessions, sessionCount);
     }
 
-    // getters for tests
     int getSessionCount() const { return sessionCount; }
     double getTotalTraining() const { return totalTraining; }
     double getAvgTraining() const { return avgTraining; }
@@ -417,12 +397,12 @@ public:
 };
 
 // --------------------
-// TrainingPlanReport (derived)
+// TrainingPlanReport
 // --------------------
 class TrainingPlanReport : public WeeklyReport
 {
 private:
-    SessionStats stats; // composition
+    SessionStats stats;
     string focus;
     double techMins;
     double condMins;
@@ -487,12 +467,12 @@ public:
 };
 
 // --------------------
-// RecoveryReport (derived)
+// RecoveryReport
 // --------------------
 class RecoveryReport : public WeeklyReport
 {
 private:
-    SessionStats stats; // composition
+    SessionStats stats;
     string fatigue;
     int restDays;
     string tip;
@@ -557,18 +537,28 @@ public:
 };
 
 // --------------------
-// ReportManager (Week 6/7) - uses DynArray<WeeklyReport*>
-// Week 7 changes:
-// - operator[] throws on invalid index
-// - operator-= throws on invalid removal (via DynArray throwing)
+// ReportManager
+// Week 8: recursive member function added
 // --------------------
 class ReportManager
 {
 private:
-    DynArray<WeeklyReport*> items; // template container
+    DynArray<WeeklyReport*> items;
+
+    int countTypeRecursive(const std::string& type, int index) const
+    {
+        // base case
+        if (index >= items.getSize())
+            return 0;
+
+        WeeklyReport* p = items.at(index);
+        int add = (p != nullptr && p->getType() == type) ? 1 : 0;
+
+        // recursive case
+        return add + countTypeRecursive(type, index + 1);
+    }
 
 public:
-    // stop copying (Rule of 3/5)
     ReportManager(const ReportManager&) = delete;
     ReportManager& operator=(const ReportManager&) = delete;
 
@@ -586,21 +576,20 @@ public:
     {
         for (int i = 0; i < items.getSize(); ++i)
         {
-            WeeklyReport* p = items[i]; // valid indices, no throw here
+            WeeklyReport* p = items[i];
             delete p;
         }
 
         while (items.getSize() > 0)
-            items.removeAt(items.getSize() - 1); // valid, no throw
+            items.removeAt(items.getSize() - 1);
     }
 
     int getSize() const { return items.getSize(); }
     int getCapacity() const { return items.getCapacity(); }
 
-    // Week 7: operator[] must throw on invalid index
     WeeklyReport* operator[](int index) const
     {
-        return items.at(index); // throws AppException if invalid
+        return items.at(index);
     }
 
     bool add(WeeklyReport* p)
@@ -611,24 +600,26 @@ public:
 
     bool removeAt(int index)
     {
-        WeeklyReport* p = items.at(index); // throws if invalid
+        WeeklyReport* p = items.at(index);
         delete p;
-        return items.removeAt(index);      // also throws if invalid (index already valid)
+        return items.removeAt(index);
     }
 
-    // operator+= adds pointer (Week 6)
     ReportManager& operator+=(WeeklyReport* p)
     {
-        // explicit this pointer usage (Week 6 requirement)
         this->add(p);
         return *this;
     }
 
-    // Week 7: operator-= must throw on invalid removal
     ReportManager& operator-=(int index)
     {
-        this->removeAt(index); // will throw AppException if invalid
+        this->removeAt(index);
         return *this;
+    }
+
+    int countReportsOfType(const std::string& type) const
+    {
+        return countTypeRecursive(type, 0);
     }
 
     void printAll() const
@@ -654,7 +645,7 @@ public:
 };
 
 // --------------------
-// TrainingLog (upgraded): uses ReportManager operators
+// TrainingLog
 // --------------------
 class TrainingLog
 {
@@ -735,7 +726,7 @@ private:
         ofstream out("report.txt");
         if (out)
         {
-            out << "WEEKLY PERFORMANCE REPORT (Week 7)\n";
+            out << "WEEKLY PERFORMANCE REPORT (Week 8)\n";
             out << "Section: LEVEL\n";
             out << "----------------------------------\n";
             out << left << setw(22) << "Player:" << right << setw(20) << name << "\n";
@@ -842,7 +833,6 @@ private:
         cout << "\n(Recovery report added to manager)\n";
     }
 
-    // Week 7: UI catches exceptions so program doesn't crash
     void deleteReport()
     {
         if (manager.getSize() == 0)
@@ -856,7 +846,7 @@ private:
 
         try
         {
-            manager -= idx; // throws on invalid removal
+            manager -= idx;
             cout << "Deleted.\n";
         }
         catch (const std::exception& ex)
@@ -949,11 +939,8 @@ public:
         } while (choice != 0);
     }
 
-    // functions used mostly for unit tests
     bool addSession(double hours)
     {
-        // FIXED (to match Week 5 behavior):
-        // negative is invalid -> do NOT clamp, return false
         if (hours < 0.0) return false;
         if (sessionCount >= MAX_SESSIONS) return false;
 
@@ -969,17 +956,20 @@ public:
 
     void setSleep(double hours)
     {
-        // Week 6: still uses template function (same behavior as Week 5)
         sleepHours = clampMin(hours, 0.0);
         evaluateLevel();
     }
 
-    // simple getters for tests
     int getSessionCount() const { return sessionCount; }
     double getTotalHours() const { return totalTraining; }
     double getAverageHours() const { return avgTraining; }
     PlayerLevel getLevel() const { return level; }
     string getAdvice() const { return advice; }
+
+    int getSavedReportCountOfType(const std::string& type) const
+    {
+        return manager.countReportsOfType(type);
+    }
 };
 
 // --------------------
@@ -987,7 +977,7 @@ public:
 // --------------------
 void setConsoleColor()
 {
-    system("color 1E");  // Windows only
+    system("color 1E");
 }
 
 void showBanner()
@@ -1077,7 +1067,6 @@ string levelToString(PlayerLevel level)
 }
 
 #ifndef _DEBUG
-// main runs only in Release (not _DEBUG)
 int main()
 {
     setConsoleColor();
@@ -1092,8 +1081,6 @@ int main()
 #endif
 
 #ifdef _DEBUG
-// doctest unit tests (run in _DEBUG)
-
 // ---------- Week 6: template function tests ----------
 TEST_CASE("Template function: clampMin works for int")
 {
@@ -1117,7 +1104,6 @@ TEST_CASE("Template class: DynArray<int> stores and resizes")
     CHECK(a.pushBack(10) == true);
     CHECK(a.getSize() == 1);
 
-    // trigger resize
     CHECK(a.pushBack(20) == true);
     CHECK(a.getSize() == 2);
     CHECK(a.getCapacity() >= 2);
@@ -1159,7 +1145,7 @@ TEST_CASE("Week 7: DynArray throws on invalid removeAt")
     CHECK_THROWS_AS(a.removeAt(1), AppException);
 }
 
-// ---------- existing Week 5 tests that still apply ----------
+// ---------- existing tests that still apply ----------
 TEST_CASE("Composition: SessionStats default ctor is empty")
 {
     SessionStats s;
@@ -1184,8 +1170,8 @@ TEST_CASE("Abstract: WeeklyReport is polymorphic via getType()")
 // ---------- Week 6: operator== tests ----------
 TEST_CASE("Equality operator: LevelReport equal objects")
 {
-    double s1[MAX_SESSIONS] = { 2.0, 4.0, 0,0,0 };
-    double s2[MAX_SESSIONS] = { 2.0, 4.0, 0,0,0 };
+    double s1[MAX_SESSIONS] = { 2.0, 4.0, 0, 0, 0 };
+    double s2[MAX_SESSIONS] = { 2.0, 4.0, 0, 0, 0 };
 
     LevelReport a("Alex", 20, LEVEL_SEMI_PRO, s1, 2, 6.0, 3.0);
     LevelReport b("Alex", 20, LEVEL_SEMI_PRO, s2, 2, 6.0, 3.0);
@@ -1195,8 +1181,8 @@ TEST_CASE("Equality operator: LevelReport equal objects")
 
 TEST_CASE("Equality operator: LevelReport not equal objects")
 {
-    double s1[MAX_SESSIONS] = { 2.0, 4.0, 0,0,0 };
-    double s2[MAX_SESSIONS] = { 3.0, 4.0, 0,0,0 };
+    double s1[MAX_SESSIONS] = { 2.0, 4.0, 0, 0, 0 };
+    double s2[MAX_SESSIONS] = { 3.0, 4.0, 0, 0, 0 };
 
     LevelReport a("Alex", 20, LEVEL_SEMI_PRO, s1, 2, 6.0, 3.0);
     LevelReport b("Alex", 20, LEVEL_SEMI_PRO, s2, 2, 7.0, 3.5);
@@ -1204,7 +1190,7 @@ TEST_CASE("Equality operator: LevelReport not equal objects")
     CHECK(!(a == b));
 }
 
-// ---------- Week 6: operator<< tests using ostringstream ----------
+// ---------- Week 6: operator<< tests ----------
 TEST_CASE("Stream output: << prints one-line summary (polymorphic)")
 {
     WeeklyReport* p = new RecoveryReport("Mike", 12, LEVEL_AMATEUR, SessionStats(1, 2.0, 2.0), "High", 2, "Aim for 8h sleep.");
@@ -1221,7 +1207,7 @@ TEST_CASE("Stream output: << prints one-line summary (polymorphic)")
 
 TEST_CASE("Stream output: << works for LevelReport")
 {
-    double s1[MAX_SESSIONS] = { 2.0, 4.0, 0,0,0 };
+    double s1[MAX_SESSIONS] = { 2.0, 4.0, 0, 0, 0 };
     WeeklyReport* p = new LevelReport("Alex", 20, LEVEL_SEMI_PRO, s1, 2, 6.0, 3.0);
     p->setSleepHours(8.0);
     p->setReadinessScore(25.0);
@@ -1235,7 +1221,7 @@ TEST_CASE("Stream output: << works for LevelReport")
     delete p;
 }
 
-// ---------- Week 6: manager [] tests (valid index) ----------
+// ---------- Week 6/7: manager tests ----------
 TEST_CASE("Indexing: operator[] valid index returns correct pointer")
 {
     ReportManager m(1);
@@ -1250,7 +1236,6 @@ TEST_CASE("Indexing: operator[] valid index returns correct pointer")
     CHECK(m[1] == b);
 }
 
-// ---------- Week 7: manager [] throws on invalid index ----------
 TEST_CASE("Week 7: ReportManager operator[] throws on invalid index")
 {
     ReportManager m(1);
@@ -1279,7 +1264,6 @@ TEST_CASE("Add operator: += increases size and preserves order")
     CHECK(m[1] == b);
 }
 
-// ---------- Week 6: += and -= tests (valid removal still works) ----------
 TEST_CASE("Add/Remove operators: += adds, -= removes and shifts")
 {
     ReportManager m(1);
@@ -1304,7 +1288,6 @@ TEST_CASE("Add/Remove operators: += adds, -= removes and shifts")
     CHECK(m[1] == c);
 }
 
-// ---------- Week 7: operator-= throws on invalid removal ----------
 TEST_CASE("Week 7: ReportManager operator-= throws on invalid removal")
 {
     ReportManager m(1);
@@ -1312,7 +1295,7 @@ TEST_CASE("Week 7: ReportManager operator-= throws on invalid removal")
     CHECK_THROWS_AS(m -= -1, AppException);
 }
 
-// ---------- TrainingLog tests (fixed back to Week 5 behavior) ----------
+// ---------- TrainingLog tests ----------
 TEST_CASE("TrainingLog: addSession updates stats (no cin)")
 {
     TrainingLog log;
@@ -1343,25 +1326,46 @@ TEST_CASE("TrainingLog: addSession guard cases (negative is invalid)")
     CHECK(log.addSession(1.0) == false);
 }
 
-#ifdef _DEBUG
+// ---------- Week 8: recursion tests ----------
+TEST_CASE("Week 8: ReportManager recursion counts types correctly (empty)")
+{
+    ReportManager m(1);
+    CHECK(m.countReportsOfType("Level") == 0);
+    CHECK(m.countReportsOfType("Recovery") == 0);
+    CHECK(m.countReportsOfType("Training Plan") == 0);
+}
+
+TEST_CASE("Week 8: ReportManager recursion counts types correctly (mixed)")
+{
+    ReportManager m(2);
+
+    m += new LevelReport();
+    m += new RecoveryReport();
+    m += new RecoveryReport();
+    m += new TrainingPlanReport();
+
+    CHECK(m.countReportsOfType("Level") == 1);
+    CHECK(m.countReportsOfType("Recovery") == 2);
+    CHECK(m.countReportsOfType("Training Plan") == 1);
+    CHECK(m.countReportsOfType("DoesNotExist") == 0);
+}
+
 int main(int argc, char** argv)
 {
-    // Run doctest
-    doctest::Context ctx;
-    ctx.applyCommandLine(argc, argv);
-    int res = ctx.run();
-
-    // CRT leak check (AFTER tests finish)
     int flags = _CrtSetDbgFlag(_CRTDBG_REPORT_FLAG);
     flags |= _CRTDBG_ALLOC_MEM_DF;
-    flags |= _CRTDBG_LEAK_CHECK_DF;
     _CrtSetDbgFlag(flags);
 
-    int leaks = _CrtDumpMemoryLeaks(); // 0 = no leaks, 1 = leaks
+    int res = 0;
+    {
+        doctest::Context ctx;
+        ctx.applyCommandLine(argc, argv);
+        res = ctx.run();
+    }
+
+    int leaks = _CrtDumpMemoryLeaks();
     std::cout << "\nCRT DumpMemoryLeaks result = " << leaks << "\n";
 
     return res;
 }
-#endif
-
 #endif

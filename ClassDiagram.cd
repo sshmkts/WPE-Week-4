@@ -37,14 +37,14 @@
   <Class Name="TrainingLog" Collapsed="true">
     <Position X="6.25" Y="5" Width="1.5" />
     <TypeIdentifier>
-      <HashCode>AAAARAAICAAAbQgBCAkAAACGAIMEABBAAAQAAAAADAI=</HashCode>
+      <HashCode>AAAARAAICAAAbQgBCAkAAACGAIMEABBAAAQIAAAADAI=</HashCode>
       <FileName>WPE Week 4.cpp</FileName>
     </TypeIdentifier>
   </Class>
   <Class Name="ReportManager" Collapsed="true">
     <Position X="4.5" Y="4" Width="1.5" />
     <TypeIdentifier>
-      <HashCode>AEAAAAAAAIAEAAAAKAgAAQAAQAEAAAAAAAAgAAACBAA=</HashCode>
+      <HashCode>AEAAAAAAAIAEAAAAKAgAAQAAQAEABAAAAAAgAAACBAA=</HashCode>
       <FileName>WPE Week 4.cpp</FileName>
     </TypeIdentifier>
   </Class>
