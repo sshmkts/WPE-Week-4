@@ -1,74 +1,74 @@
 [![Unit Tests](https://github.com/sshmkts/WPE-Week-4/actions/workflows/tests.yml/badge.svg)](https://github.com/sshmkts/WPE-Week-4/actions/workflows/tests.yml)
-# Weekly Performance Evaluator  
-## Week 07 – Exception Handling Upgrade
+# Weekly Performance Evaluator
+### Week 08 – Recursion Upgrade
 
-### Overview
-This project is an upgrade of the Week 06 codebase.  
-The purpose of Week 07 is to implement C++ exception handling (Chapter 14) while preserving all existing functionality.
+## Overview
+This project upgrades the **Week 07 codebase** by adding **C++ recursion (Chapter 15)** while preserving all existing functionality.
 
-Only the required portions of the code were modified. The diff clearly reflects exception-related changes.
-
----
-
-## 🔹 Key Concepts Implemented (Chapter 14)
-
-### 1. Custom Exception
-A custom exception class `AppException` was created.
-
-- Derived from `std::runtime_error`
-- Stores an error message
-- Uses `what()` for reporting
-
-This ensures meaningful and consistent error handling across the program.
+Only the required portions of the code were modified. The code diff highlights the recursion-related changes.
 
 ---
 
-### 2. Template Container Safety (DynArray<T>)
+## Recursion Implementation
 
-The template class now enforces safe access:
+A recursive member function was added to the `ReportManager` class:
 
-- `at(index)` throws `AppException` if index is invalid
-- `operator[]` delegates to `at()` and throws on invalid index
-- `removeAt(index)` throws if index is invalid
+countReportsOfType(string type)
 
-This prevents undefined behavior and protects memory integrity.
+This function counts how many stored reports match a given report type.
 
----
+### Base Case
+When the index reaches the end of the container, the recursion stops.
 
-### 3. Manager Operator Requirements
+### Recursive Case
+The function checks the current report and recursively processes the next element.
 
-`ReportManager` now:
-
-- `operator[]` throws on invalid index
-- `operator-=` throws on invalid removal
-
-All validation logic is delegated to the underlying template container.
+No loops (`for`, `while`, `do-while`) are used inside the recursive function.
 
 ---
 
-### 4. try/catch in User Interface
+## Integration With Existing Architecture
 
-User-driven deletion is wrapped in a `try/catch` block.
+The recursion works with the existing project design:
 
-This prevents program crashes due to invalid input and ensures controlled error handling.
-
----
-
-## 🔹 Unit Testing (doctest)
-
-Existing tests from previous weeks remain intact.
-
-New tests were added to verify:
-- Invalid indexing throws exceptions
-- Invalid removal throws exceptions
-- Manager operator[] throws correctly
-- Manager operator-= throws correctly
-
-`CHECK_THROWS_AS` is used to confirm exception types.
+- DynArray template container
+- Polymorphic `WeeklyReport*` objects
+- `getType()` used to identify report categories
 
 ---
 
-## 🔹 Memory Safety Verification (CRT)
+## Unit Testing
 
-Since dynamic memory is used (`new` / `delete`), the program verifies memory safety using:
+Unit tests are implemented using **doctest**.
+
+New tests verify:
+- recursion on an empty manager
+- recursion with multiple report types
+- correct counting results
+
+---
+
+## Memory Safety
+
+Memory safety is verified using the **CRT debug library**.
+
+_CrtDumpMemoryLeaks()
+
+The debug output confirms that no memory leaks occur after running the tests.
+
+---
+
+## Repository Tag
+
+The submission commit is tagged:
+
+Week08 Programming Assignment
+
+---
+
+## Author
+
+Oleksandr Mykytsei  
+Macomb Community College  
+ITCS 2550
 
