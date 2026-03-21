@@ -1,14 +1,15 @@
-// Week 8 - Weekly Performance Evaluator (UPGRADE from Week 7)
-// This week: C++ Recursion (Chapter 15)
-// Week 8 Requirements implemented:
-// - Add/modify a recursive member function (NO LOOPS inside)
-// - Clear base case + recursive case
-// - Must be a class member function
-// - Update doctests for recursion (keep old tests, add new)
-// - Update class diagram (add new methods to ReportManager)
+// Week 9 - Weekly Performance Evaluator (UPGRADE from Week 8)
+// This week: C++ Searching, Sorting, and the Vector Type (Chapter 16)
+// Week 9 Requirements implemented:
+// - Replace at least one existing array with std::vector
+// - Add sequential (linear) search as a class member function
+// - Add manual sorting algorithm (Bubble Sort) as a class member function
+// - Add binary search as a class member function
+// - Update doctests for vector/search/sort behavior
+// - Keep prior applicable tests
 // - Show diff in video
 // - CRT memory leak verification output (debug)
-// - Tag repo "Week08 Programming Assignment"
+// - Tag repo "Week09 Programming Assignment"
 
 #ifdef _DEBUG
 #define DOCTEST_CONFIG_IMPLEMENT
@@ -25,6 +26,7 @@
 #include <sstream>
 #include <stdexcept>
 #include <exception>
+#include <vector>
 
 using namespace std;
 
@@ -86,7 +88,7 @@ double getValidDouble(const string& prompt, double minValue);
 int getMenuChoice();
 string levelToString(PlayerLevel level);
 
-void printSessionsTable(const double sessions[], int sessionCount);
+void printSessionsTable(const vector<double>& sessions);
 
 // --------------------
 // Week 7: Custom exception
@@ -314,13 +316,13 @@ public:
 
 // --------------------
 // LevelReport
+// Week 9: sessions changed from array to vector
 // --------------------
 class LevelReport : public WeeklyReport
 {
 private:
     SessionStats stats;
-    double sessions[MAX_SESSIONS];
-    int sessionCount;
+    vector<double> sessions;
     double totalTraining;
     double avgTraining;
 
@@ -329,26 +331,22 @@ public:
         : WeeklyReport()
     {
         stats = SessionStats();
-        sessionCount = 0;
         totalTraining = 0.0;
         avgTraining = 0.0;
-        for (int i = 0; i < MAX_SESSIONS; ++i) sessions[i] = 0.0;
     }
 
     LevelReport(const string& name, int playerAge, PlayerLevel lvl,
-        const double sess[], int count, double total, double avg)
+        const vector<double>& sess, double total, double avg)
         : WeeklyReport(name, playerAge, lvl)
     {
-        sessionCount = (count < 0 ? 0 : count);
-        if (sessionCount > MAX_SESSIONS) sessionCount = MAX_SESSIONS;
+        sessions = sess;
+        if (static_cast<int>(sessions.size()) > MAX_SESSIONS)
+            sessions.resize(MAX_SESSIONS);
 
         totalTraining = (total < 0.0 ? 0.0 : total);
         avgTraining = (avg < 0.0 ? 0.0 : avg);
 
-        for (int i = 0; i < MAX_SESSIONS; ++i)
-            sessions[i] = (i < sessionCount ? sess[i] : 0.0);
-
-        stats = SessionStats(sessionCount, totalTraining, avgTraining);
+        stats = SessionStats(static_cast<int>(sessions.size()), totalTraining, avgTraining);
     }
 
     string getType() const override { return "Level"; }
@@ -358,7 +356,7 @@ public:
         return (this->getPlayerName() == rhs.getPlayerName() &&
             this->getAge() == rhs.getAge() &&
             this->getLevel() == rhs.getLevel() &&
-            this->sessionCount == rhs.sessionCount &&
+            this->sessions.size() == rhs.sessions.size() &&
             this->totalTraining == rhs.totalTraining);
     }
 
@@ -369,7 +367,7 @@ public:
             << " | Name=" << getPlayerName()
             << " | Age=" << getAge()
             << " | Level=" << levelToString(getLevel())
-            << " | Sessions=" << sessionCount
+            << " | Sessions=" << sessions.size()
             << " | Total=" << totalTraining
             << " | Avg=" << avgTraining
             << " | Sleep=" << getSleepHours()
@@ -387,10 +385,10 @@ public:
             << " | Total hours: " << stats.getTotalHours()
             << " | Avg hours: " << stats.getAvgHours() << "\n";
 
-        printSessionsTable(sessions, sessionCount);
+        printSessionsTable(sessions);
     }
 
-    int getSessionCount() const { return sessionCount; }
+    int getSessionCount() const { return static_cast<int>(sessions.size()); }
     double getTotalTraining() const { return totalTraining; }
     double getAvgTraining() const { return avgTraining; }
     SessionStats getStats() const { return stats; }
@@ -538,7 +536,7 @@ public:
 
 // --------------------
 // ReportManager
-// Week 8: recursive member function added
+// Week 8: recursive member function retained
 // --------------------
 class ReportManager
 {
@@ -547,14 +545,12 @@ private:
 
     int countTypeRecursive(const std::string& type, int index) const
     {
-        // base case
         if (index >= items.getSize())
             return 0;
 
         WeeklyReport* p = items.at(index);
         int add = (p != nullptr && p->getType() == type) ? 1 : 0;
 
-        // recursive case
         return add + countTypeRecursive(type, index + 1);
     }
 
@@ -646,6 +642,8 @@ public:
 
 // --------------------
 // TrainingLog
+// Week 9: sessions changed from array to vector
+// Added: sequential search, bubble sort, binary search
 // --------------------
 class TrainingLog
 {
@@ -654,8 +652,7 @@ private:
     int age;
     double sleepHours;
 
-    double sessions[MAX_SESSIONS];
-    int sessionCount;
+    vector<double> sessions;
 
     double totalTraining;
     double avgTraining;
@@ -670,11 +667,10 @@ private:
     {
         totalTraining = 0.0;
 
-        if (sessionCount < 0) sessionCount = 0;
-        for (int i = 0; i < sessionCount; ++i)
-            totalTraining += sessions[i];
+        for (size_t i = 0; i < sessions.size(); ++i)
+            totalTraining += sessions.at(i);
 
-        avgTraining = (sessionCount > 0 ? totalTraining / sessionCount : 0.0);
+        avgTraining = (!sessions.empty() ? totalTraining / sessions.size() : 0.0);
     }
 
     void evaluateLevel()
@@ -706,14 +702,14 @@ private:
 
     SessionStats buildStats() const
     {
-        return SessionStats(sessionCount, totalTraining, avgTraining);
+        return SessionStats(static_cast<int>(sessions.size()), totalTraining, avgTraining);
     }
 
     void addLevelReport()
     {
         WeeklyReport* rpt = new LevelReport(
             name, age, level,
-            sessions, sessionCount,
+            sessions,
             totalTraining, avgTraining
         );
 
@@ -726,7 +722,7 @@ private:
         ofstream out("report.txt");
         if (out)
         {
-            out << "WEEKLY PERFORMANCE REPORT (Week 8)\n";
+            out << "WEEKLY PERFORMANCE REPORT (Week 9)\n";
             out << "Section: LEVEL\n";
             out << "----------------------------------\n";
             out << left << setw(22) << "Player:" << right << setw(20) << name << "\n";
@@ -740,8 +736,8 @@ private:
 
             out << "Session details:\n";
             out << left << setw(10) << "Session" << setw(15) << "Hours" << "\n";
-            for (int i = 0; i < sessionCount; ++i)
-                out << left << setw(10) << (i + 1) << setw(15) << sessions[i] << "\n";
+            for (size_t i = 0; i < sessions.size(); ++i)
+                out << left << setw(10) << (i + 1) << setw(15) << sessions.at(i) << "\n";
         }
         else
         {
@@ -863,16 +859,13 @@ public:
         age = 0;
         sleepHours = 0.0;
 
-        sessionCount = 0;
+        sessions.clear();
         totalTraining = 0.0;
         avgTraining = 0.0;
 
         level = LEVEL_AMATEUR;
         readinessScore = 0.0;
         advice = "";
-
-        for (int i = 0; i < MAX_SESSIONS; ++i)
-            sessions[i] = 0.0;
     }
 
     void setup()
@@ -884,8 +877,9 @@ public:
 
         cout << fixed << showpoint << setprecision(2);
 
+        int inputSessionCount;
         cout << "\nHow many training sessions did you have this week (1-" << MAX_SESSIONS << ")? ";
-        while (!(cin >> sessionCount) || sessionCount < 1 || sessionCount > MAX_SESSIONS)
+        while (!(cin >> inputSessionCount) || inputSessionCount < 1 || inputSessionCount > MAX_SESSIONS)
         {
             cin.clear();
             cin.ignore(INPUT_FLUSH, '\n');
@@ -893,13 +887,14 @@ public:
         }
         cin.ignore(INPUT_FLUSH, '\n');
 
+        sessions.clear();
+
         cout << "\nEnter training hours for each session:\n";
-        for (int i = 0; i < sessionCount; ++i)
+        for (int i = 0; i < inputSessionCount; ++i)
         {
-            sessions[i] = getValidDouble("  Session " + to_string(i + 1) + ": ", MIN_TRAINING_HOURS);
+            double hours = getValidDouble("  Session " + to_string(i + 1) + ": ", MIN_TRAINING_HOURS);
+            sessions.push_back(hours);
         }
-        for (int i = sessionCount; i < MAX_SESSIONS; ++i)
-            sessions[i] = 0.0;
 
         sleepHours = getValidDouble("Avg sleep hours per night: ", MIN_SLEEP_HOURS);
 
@@ -942,14 +937,9 @@ public:
     bool addSession(double hours)
     {
         if (hours < 0.0) return false;
-        if (sessionCount >= MAX_SESSIONS) return false;
+        if (static_cast<int>(sessions.size()) >= MAX_SESSIONS) return false;
 
-        sessions[sessionCount] = hours;
-        sessionCount++;
-
-        for (int i = sessionCount; i < MAX_SESSIONS; ++i)
-            sessions[i] = 0.0;
-
+        sessions.push_back(hours);
         computeTrainingStats();
         return true;
     }
@@ -960,11 +950,74 @@ public:
         evaluateLevel();
     }
 
-    int getSessionCount() const { return sessionCount; }
+    // Week 9: sequential (linear) search
+    int sequentialSearchSession(double target) const
+    {
+        for (size_t i = 0; i < sessions.size(); ++i)
+        {
+            if (sessions.at(i) == target)
+                return static_cast<int>(i);
+        }
+        return -1;
+    }
+
+    // Week 9: bubble sort
+    void sortSessionsBubble()
+    {
+        if (sessions.empty()) return;
+
+        for (size_t pass = 0; pass < sessions.size() - 1; ++pass)
+        {
+            for (size_t i = 0; i < sessions.size() - 1 - pass; ++i)
+            {
+                if (sessions.at(i) > sessions.at(i + 1))
+                {
+                    double temp = sessions.at(i);
+                    sessions.at(i) = sessions.at(i + 1);
+                    sessions.at(i + 1) = temp;
+                }
+            }
+        }
+
+        computeTrainingStats();
+    }
+
+    // Week 9: binary search
+    int binarySearchSession(double target)
+    {
+        sortSessionsBubble();
+
+        int low = 0;
+        int high = static_cast<int>(sessions.size()) - 1;
+
+        while (low <= high)
+        {
+            int mid = (low + high) / 2;
+            double midValue = sessions.at(mid);
+
+            if (midValue == target)
+                return mid;
+            else if (midValue < target)
+                low = mid + 1;
+            else
+                high = mid - 1;
+        }
+
+        return -1;
+    }
+
+    int getSessionCount() const { return static_cast<int>(sessions.size()); }
     double getTotalHours() const { return totalTraining; }
     double getAverageHours() const { return avgTraining; }
     PlayerLevel getLevel() const { return level; }
     string getAdvice() const { return advice; }
+
+    double getSessionAt(int index) const
+    {
+        if (index < 0 || index >= static_cast<int>(sessions.size()))
+            throw AppException("TrainingLog: invalid index in getSessionAt");
+        return sessions.at(index);
+    }
 
     int getSavedReportCountOfType(const std::string& type) const
     {
@@ -1043,15 +1096,15 @@ int getMenuChoice()
     return choice;
 }
 
-void printSessionsTable(const double sessions[], int sessionCount)
+void printSessionsTable(const vector<double>& sessions)
 {
     cout << "\nSession Breakdown:\n";
     cout << left << setw(10) << "#" << setw(12) << "Hours" << "\n";
 
-    for (int i = 0; i < sessionCount; ++i)
+    for (size_t i = 0; i < sessions.size(); ++i)
     {
         cout << left << setw(10) << (i + 1)
-            << setw(12) << sessions[i] << "\n";
+            << setw(12) << sessions.at(i) << "\n";
     }
 }
 
@@ -1170,22 +1223,22 @@ TEST_CASE("Abstract: WeeklyReport is polymorphic via getType()")
 // ---------- Week 6: operator== tests ----------
 TEST_CASE("Equality operator: LevelReport equal objects")
 {
-    double s1[MAX_SESSIONS] = { 2.0, 4.0, 0, 0, 0 };
-    double s2[MAX_SESSIONS] = { 2.0, 4.0, 0, 0, 0 };
+    vector<double> s1 = { 2.0, 4.0 };
+    vector<double> s2 = { 2.0, 4.0 };
 
-    LevelReport a("Alex", 20, LEVEL_SEMI_PRO, s1, 2, 6.0, 3.0);
-    LevelReport b("Alex", 20, LEVEL_SEMI_PRO, s2, 2, 6.0, 3.0);
+    LevelReport a("Alex", 20, LEVEL_SEMI_PRO, s1, 6.0, 3.0);
+    LevelReport b("Alex", 20, LEVEL_SEMI_PRO, s2, 6.0, 3.0);
 
     CHECK(a == b);
 }
 
 TEST_CASE("Equality operator: LevelReport not equal objects")
 {
-    double s1[MAX_SESSIONS] = { 2.0, 4.0, 0, 0, 0 };
-    double s2[MAX_SESSIONS] = { 3.0, 4.0, 0, 0, 0 };
+    vector<double> s1 = { 2.0, 4.0 };
+    vector<double> s2 = { 3.0, 4.0 };
 
-    LevelReport a("Alex", 20, LEVEL_SEMI_PRO, s1, 2, 6.0, 3.0);
-    LevelReport b("Alex", 20, LEVEL_SEMI_PRO, s2, 2, 7.0, 3.5);
+    LevelReport a("Alex", 20, LEVEL_SEMI_PRO, s1, 6.0, 3.0);
+    LevelReport b("Alex", 20, LEVEL_SEMI_PRO, s2, 7.0, 3.5);
 
     CHECK(!(a == b));
 }
@@ -1207,8 +1260,8 @@ TEST_CASE("Stream output: << prints one-line summary (polymorphic)")
 
 TEST_CASE("Stream output: << works for LevelReport")
 {
-    double s1[MAX_SESSIONS] = { 2.0, 4.0, 0, 0, 0 };
-    WeeklyReport* p = new LevelReport("Alex", 20, LEVEL_SEMI_PRO, s1, 2, 6.0, 3.0);
+    vector<double> s1 = { 2.0, 4.0 };
+    WeeklyReport* p = new LevelReport("Alex", 20, LEVEL_SEMI_PRO, s1, 6.0, 3.0);
     p->setSleepHours(8.0);
     p->setReadinessScore(25.0);
 
@@ -1296,7 +1349,7 @@ TEST_CASE("Week 7: ReportManager operator-= throws on invalid removal")
 }
 
 // ---------- TrainingLog tests ----------
-TEST_CASE("TrainingLog: addSession updates stats (no cin)")
+TEST_CASE("TrainingLog: addSession updates stats (vector)")
 {
     TrainingLog log;
 
@@ -1348,6 +1401,108 @@ TEST_CASE("Week 8: ReportManager recursion counts types correctly (mixed)")
     CHECK(m.countReportsOfType("Recovery") == 2);
     CHECK(m.countReportsOfType("Training Plan") == 1);
     CHECK(m.countReportsOfType("DoesNotExist") == 0);
+}
+
+// ---------- Week 9: vector / sequential search / sort / binary search ----------
+TEST_CASE("Week 9: sequential search finds correct index")
+{
+    TrainingLog log;
+    log.addSession(3.0);
+    log.addSession(1.5);
+    log.addSession(4.0);
+
+    CHECK(log.sequentialSearchSession(3.0) == 0);
+    CHECK(log.sequentialSearchSession(1.5) == 1);
+    CHECK(log.sequentialSearchSession(4.0) == 2);
+}
+
+TEST_CASE("Week 9: sequential search returns -1 when not found")
+{
+    TrainingLog log;
+    log.addSession(2.0);
+    log.addSession(5.0);
+
+    CHECK(log.sequentialSearchSession(7.0) == -1);
+}
+
+TEST_CASE("Week 9: sequential search on empty vector returns -1")
+{
+    TrainingLog log;
+    CHECK(log.sequentialSearchSession(2.0) == -1);
+}
+
+TEST_CASE("Week 9: bubble sort orders vector ascending")
+{
+    TrainingLog log;
+    log.addSession(4.0);
+    log.addSession(1.0);
+    log.addSession(3.0);
+    log.addSession(2.0);
+
+    log.sortSessionsBubble();
+
+    CHECK(log.getSessionAt(0) == doctest::Approx(1.0));
+    CHECK(log.getSessionAt(1) == doctest::Approx(2.0));
+    CHECK(log.getSessionAt(2) == doctest::Approx(3.0));
+    CHECK(log.getSessionAt(3) == doctest::Approx(4.0));
+}
+
+TEST_CASE("Week 9: bubble sort handles empty vector")
+{
+    TrainingLog log;
+    log.sortSessionsBubble();
+
+    CHECK(log.getSessionCount() == 0);
+}
+
+TEST_CASE("Week 9: bubble sort handles one element")
+{
+    TrainingLog log;
+    log.addSession(2.5);
+
+    log.sortSessionsBubble();
+
+    CHECK(log.getSessionCount() == 1);
+    CHECK(log.getSessionAt(0) == doctest::Approx(2.5));
+}
+
+TEST_CASE("Week 9: binary search finds element after sorting")
+{
+    TrainingLog log;
+    log.addSession(4.0);
+    log.addSession(1.0);
+    log.addSession(3.0);
+    log.addSession(2.0);
+
+    int index = log.binarySearchSession(3.0);
+
+    CHECK(index != -1);
+    CHECK(log.getSessionAt(index) == doctest::Approx(3.0));
+}
+
+TEST_CASE("Week 9: binary search returns -1 when not found")
+{
+    TrainingLog log;
+    log.addSession(4.0);
+    log.addSession(1.0);
+    log.addSession(3.0);
+
+    CHECK(log.binarySearchSession(9.0) == -1);
+}
+
+TEST_CASE("Week 9: binary search on empty vector returns -1")
+{
+    TrainingLog log;
+    CHECK(log.binarySearchSession(5.0) == -1);
+}
+
+TEST_CASE("Week 9: getSessionAt throws on invalid index")
+{
+    TrainingLog log;
+    log.addSession(1.0);
+
+    CHECK_THROWS_AS(log.getSessionAt(-1), AppException);
+    CHECK_THROWS_AS(log.getSessionAt(1), AppException);
 }
 
 int main(int argc, char** argv)

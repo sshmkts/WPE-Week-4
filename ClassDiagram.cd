@@ -1,7 +1,7 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <ClassDiagram MajorVersion="1" MinorVersion="1">
   <Class Name="SessionStats" Collapsed="true">
-    <Position X="4.5" Y="5" Width="1.5" />
+    <Position X="11.5" Y="3" Width="1.5" />
     <TypeIdentifier>
       <HashCode>AAIAAAAAAAAAAAEAAAgAAAAAAAIEYAAAAAAAgAAARAA=</HashCode>
       <FileName>WPE Week 4.cpp</FileName>
@@ -15,11 +15,13 @@
     </TypeIdentifier>
   </Class>
   <Class Name="TrainingPlanReport" Collapsed="true">
-    <Position X="6.25" Y="3" Width="1.5" />
+    <Position X="6.25" Y="2.25" Width="1.5" />
     <InheritanceLine Type="WeeklyReport" ManuallyRouted="true">
       <Path>
         <Point X="7" Y="1.812" />
-        <Point X="7" Y="3" />
+        <Point X="7" Y="2.406" />
+        <Point X="7" Y="2.406" />
+        <Point X="7" Y="2.25" />
       </Path>
     </InheritanceLine>
     <TypeIdentifier>
@@ -28,49 +30,49 @@
     </TypeIdentifier>
   </Class>
   <Class Name="RecoveryReport" Collapsed="true">
-    <Position X="8" Y="3" Width="1.5" />
+    <Position X="8" Y="2.25" Width="1.5" />
     <TypeIdentifier>
       <HashCode>AAUQAAAQgAQAIAAAAAAAAAAgEwBIAAhAAAAAAAAAACA=</HashCode>
       <FileName>WPE Week 4.cpp</FileName>
     </TypeIdentifier>
   </Class>
   <Class Name="TrainingLog" Collapsed="true">
-    <Position X="6.25" Y="5" Width="1.5" />
+    <Position X="1" Y="3.25" Width="1.5" />
     <TypeIdentifier>
-      <HashCode>AAAARAAICAAAbQgBCAkAAACGAIMEABBAAAQIAAAADAI=</HashCode>
+      <HashCode>AAAARAAICAAAbQgBCIkAIACmAIMEABBAAAQIAAAACAI=</HashCode>
       <FileName>WPE Week 4.cpp</FileName>
     </TypeIdentifier>
   </Class>
   <Class Name="ReportManager" Collapsed="true">
-    <Position X="4.5" Y="4" Width="1.5" />
+    <Position X="2.75" Y="3.25" Width="1.5" />
     <TypeIdentifier>
       <HashCode>AEAAAAAAAIAEAAAAKAgAAQAAQAEABAAAAAAgAAACBAA=</HashCode>
       <FileName>WPE Week 4.cpp</FileName>
     </TypeIdentifier>
   </Class>
   <Class Name="LevelReport" Collapsed="true">
-    <Position X="4.5" Y="3" Width="1.5" />
+    <Position X="4.5" Y="2.25" Width="1.5" />
     <TypeIdentifier>
-      <HashCode>AAUAAAgQAAAAIAAAAAACAQCgAYAEAAAACAAAAAAABAA=</HashCode>
+      <HashCode>AAUAAAgQAAAAIAAAAAACAQCgAYAEAAAACAAAAAAAAAA=</HashCode>
       <FileName>WPE Week 4.cpp</FileName>
     </TypeIdentifier>
   </Class>
   <Class Name="DynArray&lt;T&gt;" Collapsed="true">
-    <Position X="8" Y="4" Width="1.5" />
+    <Position X="9.75" Y="3" Width="1.5" />
     <TypeIdentifier>
       <HashCode>AAAAACAAAIAAEAAAKIIAAAAQAAEAAAAAgQAwAAAAAAA=</HashCode>
       <FileName>WPE Week 4.cpp</FileName>
     </TypeIdentifier>
   </Class>
   <Class Name="AppException" Collapsed="true">
-    <Position X="6.25" Y="4" Width="1.5" />
+    <Position X="2.5" Y="5.5" Width="1.5" />
     <TypeIdentifier>
       <HashCode>AAAAAgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
       <FileName>WPE Week 4.cpp</FileName>
     </TypeIdentifier>
   </Class>
   <Enum Name="PlayerLevel" Collapsed="true">
-    <Position X="8" Y="5" Width="1.5" />
+    <Position X="9.75" Y="5.5" Width="1.5" />
     <TypeIdentifier>
       <HashCode>AAAAAAAAAAACAAAAAAAAAAAAAAAAQAAAAAAAAAIAAAA=</HashCode>
       <FileName>WPE Week 4.cpp</FileName>
