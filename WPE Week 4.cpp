@@ -1,15 +1,16 @@
-// Week 9 - Weekly Performance Evaluator (UPGRADE from Week 8)
-// This week: C++ Searching, Sorting, and the Vector Type (Chapter 16)
-// Week 9 Requirements implemented:
-// - Replace at least one existing array with std::vector
-// - Add sequential (linear) search as a class member function
-// - Add manual sorting algorithm (Bubble Sort) as a class member function
-// - Add binary search as a class member function
-// - Update doctests for vector/search/sort behavior
+// Week 10 - Weekly Performance Evaluator (UPGRADE from Week 9)
+// This week: C++ Linked Lists (Chapter 17)
+// Week 10 Requirements implemented:
+// - Upgrade Week 9 codebase (NOT a total rewrite)
+// - Replace one existing structure with a custom linked list ADT
+// - Added unordered linked list for training sessions
+// - Added iterator class for traversal
+// - Added insert, delete, search, print/traverse operations
+// - Updated doctests for linked list behavior
 // - Keep prior applicable tests
 // - Show diff in video
 // - CRT memory leak verification output (debug)
-// - Tag repo "Week09 Programming Assignment"
+// - Tag repo "Week10 Programming Assignment"
 
 #ifdef _DEBUG
 #define DOCTEST_CONFIG_IMPLEMENT
@@ -30,17 +31,28 @@
 
 using namespace std;
 
-// --------------------
-// function template (Week 6)
-// --------------------
-template <typename T>
-T clampMin(T value, T minValue)
-{
-    return (value < minValue ? minValue : value);
-}
+// forward declaration
+class SessionLinkedList;
 
 // --------------------
-// constants (so I don't use magic numbers)
+// function prototypes
+// --------------------
+template <typename T>
+T clampMin(T value, T minValue);
+
+void setConsoleColor();
+void showBanner();
+
+int getValidInt(const string& prompt, int minValue);
+double getValidDouble(const string& prompt, double minValue);
+
+int getMenuChoice();
+string levelToString(int level);
+
+void printSessionsTable(const SessionLinkedList& sessions);
+
+// --------------------
+// constants
 // --------------------
 const double PRO_TRAIN_HRS = 6.0;
 const double INT_TRAIN_HRS = 3.0;
@@ -78,17 +90,14 @@ const int REST_DAYS_LOW = 0;
 // player level enum
 enum PlayerLevel { LEVEL_AMATEUR, LEVEL_SEMI_PRO, LEVEL_PRO };
 
-// helper functions for input/output
-void setConsoleColor();
-void showBanner();
-
-int getValidInt(const string& prompt, int minValue);
-double getValidDouble(const string& prompt, double minValue);
-
-int getMenuChoice();
-string levelToString(PlayerLevel level);
-
-void printSessionsTable(const vector<double>& sessions);
+// --------------------
+// Week 6: template function
+// --------------------
+template <typename T>
+T clampMin(T value, T minValue)
+{
+    return (value < minValue ? minValue : value);
+}
 
 // --------------------
 // Week 7: Custom exception
@@ -157,8 +166,8 @@ public:
 
     bool pushBack(const T& value)
     {
-        if (this->size >= this->capacity)
-            this->resize(this->capacity * 2);
+        if (size >= capacity)
+            resize(capacity * 2);
 
         data[size] = value;
         size++;
@@ -188,6 +197,270 @@ public:
     T operator[](int index) const
     {
         return at(index);
+    }
+};
+
+// --------------------
+// Week 10: custom unordered linked list ADT
+// Replaces vector<double> sessions in TrainingLog
+// --------------------
+class SessionLinkedList
+{
+private:
+    struct Node
+    {
+        double data;
+        Node* next;
+
+        Node(double value)
+        {
+            data = value;
+            next = nullptr;
+        }
+    };
+
+public:
+    class Iterator
+    {
+    private:
+        Node* current;
+
+    public:
+        Iterator(Node* ptr = nullptr)
+        {
+            current = ptr;
+        }
+
+        double operator*() const
+        {
+            if (current == nullptr)
+                throw AppException("Iterator: cannot dereference null");
+            return current->data;
+        }
+
+        Iterator& operator++()
+        {
+            if (current != nullptr)
+                current = current->next;
+            return *this;
+        }
+
+        bool operator!=(const Iterator& rhs) const
+        {
+            return current != rhs.current;
+        }
+
+        bool operator==(const Iterator& rhs) const
+        {
+            return current == rhs.current;
+        }
+    };
+
+private:
+    Node* first;
+    Node* last;
+    int count;
+
+    Node* nodeAt(int index) const
+    {
+        if (index < 0 || index >= count)
+            throw AppException("SessionLinkedList: invalid index");
+
+        Node* current = first;
+        int i = 0;
+
+        while (current != nullptr && i < index)
+        {
+            current = current->next;
+            i++;
+        }
+
+        return current;
+    }
+
+public:
+    SessionLinkedList()
+    {
+        first = nullptr;
+        last = nullptr;
+        count = 0;
+    }
+
+    ~SessionLinkedList()
+    {
+        clear();
+    }
+
+    SessionLinkedList(const SessionLinkedList&) = delete;
+    SessionLinkedList& operator=(const SessionLinkedList&) = delete;
+
+    void clear()
+    {
+        Node* current = first;
+
+        while (current != nullptr)
+        {
+            Node* temp = current;
+            current = current->next;
+            delete temp;
+        }
+
+        first = nullptr;
+        last = nullptr;
+        count = 0;
+    }
+
+    bool isEmpty() const
+    {
+        return first == nullptr;
+    }
+
+    int size() const
+    {
+        return count;
+    }
+
+    void insertFirst(double value)
+    {
+        Node* newNode = new Node(value);
+
+        if (first == nullptr)
+        {
+            first = newNode;
+            last = newNode;
+        }
+        else
+        {
+            newNode->next = first;
+            first = newNode;
+        }
+
+        count++;
+    }
+
+    void insertLast(double value)
+    {
+        Node* newNode = new Node(value);
+
+        if (first == nullptr)
+        {
+            first = newNode;
+            last = newNode;
+        }
+        else
+        {
+            last->next = newNode;
+            last = newNode;
+        }
+
+        count++;
+    }
+
+    bool deleteValue(double value)
+    {
+        if (first == nullptr)
+            return false;
+
+        if (first->data == value)
+        {
+            Node* temp = first;
+            first = first->next;
+            delete temp;
+            count--;
+
+            if (first == nullptr)
+                last = nullptr;
+
+            return true;
+        }
+
+        Node* trail = first;
+        Node* current = first->next;
+
+        while (current != nullptr)
+        {
+            if (current->data == value)
+            {
+                trail->next = current->next;
+
+                if (current == last)
+                    last = trail;
+
+                delete current;
+                count--;
+                return true;
+            }
+
+            trail = current;
+            current = current->next;
+        }
+
+        return false;
+    }
+
+    int search(double value) const
+    {
+        Node* current = first;
+        int index = 0;
+
+        while (current != nullptr)
+        {
+            if (current->data == value)
+                return index;
+
+            current = current->next;
+            index++;
+        }
+
+        return -1;
+    }
+
+    double getAt(int index) const
+    {
+        return nodeAt(index)->data;
+    }
+
+    void setAt(int index, double value)
+    {
+        nodeAt(index)->data = value;
+    }
+
+    void print(ostream& os = cout) const
+    {
+        if (first == nullptr)
+        {
+            os << "(empty)";
+            return;
+        }
+
+        Node* current = first;
+        while (current != nullptr)
+        {
+            os << current->data;
+            if (current->next != nullptr)
+                os << " -> ";
+            current = current->next;
+        }
+    }
+
+    vector<double> toVector() const
+    {
+        vector<double> values;
+
+        for (Iterator it = begin(); it != end(); ++it)
+            values.push_back(*it);
+
+        return values;
+    }
+
+    Iterator begin() const
+    {
+        return Iterator(first);
+    }
+
+    Iterator end() const
+    {
+        return Iterator(nullptr);
     }
 };
 
@@ -316,7 +589,8 @@ public:
 
 // --------------------
 // LevelReport
-// Week 9: sessions changed from array to vector
+// Kept mostly unchanged to avoid total rewrite
+// Uses vector snapshot passed from linked list
 // --------------------
 class LevelReport : public WeeklyReport
 {
@@ -385,7 +659,14 @@ public:
             << " | Total hours: " << stats.getTotalHours()
             << " | Avg hours: " << stats.getAvgHours() << "\n";
 
-        printSessionsTable(sessions);
+        cout << "\nSession Breakdown:\n";
+        cout << left << setw(10) << "#" << setw(12) << "Hours" << "\n";
+
+        for (size_t i = 0; i < sessions.size(); ++i)
+        {
+            cout << left << setw(10) << (i + 1)
+                << setw(12) << sessions.at(i) << "\n";
+        }
     }
 
     int getSessionCount() const { return static_cast<int>(sessions.size()); }
@@ -536,7 +817,7 @@ public:
 
 // --------------------
 // ReportManager
-// Week 8: recursive member function retained
+// Week 8 recursive function retained
 // --------------------
 class ReportManager
 {
@@ -603,13 +884,13 @@ public:
 
     ReportManager& operator+=(WeeklyReport* p)
     {
-        this->add(p);
+        add(p);
         return *this;
     }
 
     ReportManager& operator-=(int index)
     {
-        this->removeAt(index);
+        removeAt(index);
         return *this;
     }
 
@@ -642,8 +923,8 @@ public:
 
 // --------------------
 // TrainingLog
-// Week 9: sessions changed from array to vector
-// Added: sequential search, bubble sort, binary search
+// Week 10: sessions changed from vector to custom linked list
+// Week 9 search/sort logic kept, adapted to linked list
 // --------------------
 class TrainingLog
 {
@@ -652,7 +933,7 @@ private:
     int age;
     double sleepHours;
 
-    vector<double> sessions;
+    SessionLinkedList sessions;
 
     double totalTraining;
     double avgTraining;
@@ -667,10 +948,10 @@ private:
     {
         totalTraining = 0.0;
 
-        for (size_t i = 0; i < sessions.size(); ++i)
-            totalTraining += sessions.at(i);
+        for (SessionLinkedList::Iterator it = sessions.begin(); it != sessions.end(); ++it)
+            totalTraining += *it;
 
-        avgTraining = (!sessions.empty() ? totalTraining / sessions.size() : 0.0);
+        avgTraining = (!sessions.isEmpty() ? totalTraining / sessions.size() : 0.0);
     }
 
     void evaluateLevel()
@@ -702,14 +983,14 @@ private:
 
     SessionStats buildStats() const
     {
-        return SessionStats(static_cast<int>(sessions.size()), totalTraining, avgTraining);
+        return SessionStats(sessions.size(), totalTraining, avgTraining);
     }
 
     void addLevelReport()
     {
         WeeklyReport* rpt = new LevelReport(
             name, age, level,
-            sessions,
+            sessions.toVector(),
             totalTraining, avgTraining
         );
 
@@ -722,7 +1003,7 @@ private:
         ofstream out("report.txt");
         if (out)
         {
-            out << "WEEKLY PERFORMANCE REPORT (Week 9)\n";
+            out << "WEEKLY PERFORMANCE REPORT (Week 10)\n";
             out << "Section: LEVEL\n";
             out << "----------------------------------\n";
             out << left << setw(22) << "Player:" << right << setw(20) << name << "\n";
@@ -736,8 +1017,14 @@ private:
 
             out << "Session details:\n";
             out << left << setw(10) << "Session" << setw(15) << "Hours" << "\n";
-            for (size_t i = 0; i < sessions.size(); ++i)
-                out << left << setw(10) << (i + 1) << setw(15) << sessions.at(i) << "\n";
+
+            int index = 1;
+            for (SessionLinkedList::Iterator it = sessions.begin(); it != sessions.end(); ++it)
+            {
+                out << left << setw(10) << index
+                    << setw(15) << *it << "\n";
+                index++;
+            }
         }
         else
         {
@@ -858,11 +1145,8 @@ public:
         name = "";
         age = 0;
         sleepHours = 0.0;
-
-        sessions.clear();
         totalTraining = 0.0;
         avgTraining = 0.0;
-
         level = LEVEL_AMATEUR;
         readinessScore = 0.0;
         advice = "";
@@ -893,7 +1177,7 @@ public:
         for (int i = 0; i < inputSessionCount; ++i)
         {
             double hours = getValidDouble("  Session " + to_string(i + 1) + ": ", MIN_TRAINING_HOURS);
-            sessions.push_back(hours);
+            sessions.insertLast(hours);
         }
 
         sleepHours = getValidDouble("Avg sleep hours per night: ", MIN_SLEEP_HOURS);
@@ -937,9 +1221,9 @@ public:
     bool addSession(double hours)
     {
         if (hours < 0.0) return false;
-        if (static_cast<int>(sessions.size()) >= MAX_SESSIONS) return false;
+        if (sessions.size() >= MAX_SESSIONS) return false;
 
-        sessions.push_back(hours);
+        sessions.insertLast(hours);
         computeTrainingStats();
         return true;
     }
@@ -950,31 +1234,28 @@ public:
         evaluateLevel();
     }
 
-    // Week 9: sequential (linear) search
+    // Week 10: search using linked list traversal / ADT search
     int sequentialSearchSession(double target) const
     {
-        for (size_t i = 0; i < sessions.size(); ++i)
-        {
-            if (sessions.at(i) == target)
-                return static_cast<int>(i);
-        }
-        return -1;
+        return sessions.search(target);
     }
 
-    // Week 9: bubble sort
+    // Week 10: bubble sort adapted to linked list using getAt/setAt
     void sortSessionsBubble()
     {
-        if (sessions.empty()) return;
+        if (sessions.size() <= 1) return;
 
-        for (size_t pass = 0; pass < sessions.size() - 1; ++pass)
+        for (int pass = 0; pass < sessions.size() - 1; ++pass)
         {
-            for (size_t i = 0; i < sessions.size() - 1 - pass; ++i)
+            for (int i = 0; i < sessions.size() - 1 - pass; ++i)
             {
-                if (sessions.at(i) > sessions.at(i + 1))
+                double leftValue = sessions.getAt(i);
+                double rightValue = sessions.getAt(i + 1);
+
+                if (leftValue > rightValue)
                 {
-                    double temp = sessions.at(i);
-                    sessions.at(i) = sessions.at(i + 1);
-                    sessions.at(i + 1) = temp;
+                    sessions.setAt(i, rightValue);
+                    sessions.setAt(i + 1, leftValue);
                 }
             }
         }
@@ -982,18 +1263,18 @@ public:
         computeTrainingStats();
     }
 
-    // Week 9: binary search
+    // Week 10: binary search on sorted linked list (using indexed access)
     int binarySearchSession(double target)
     {
         sortSessionsBubble();
 
         int low = 0;
-        int high = static_cast<int>(sessions.size()) - 1;
+        int high = sessions.size() - 1;
 
         while (low <= high)
         {
             int mid = (low + high) / 2;
-            double midValue = sessions.at(mid);
+            double midValue = sessions.getAt(mid);
 
             if (midValue == target)
                 return mid;
@@ -1006,7 +1287,7 @@ public:
         return -1;
     }
 
-    int getSessionCount() const { return static_cast<int>(sessions.size()); }
+    int getSessionCount() const { return sessions.size(); }
     double getTotalHours() const { return totalTraining; }
     double getAverageHours() const { return avgTraining; }
     PlayerLevel getLevel() const { return level; }
@@ -1014,9 +1295,7 @@ public:
 
     double getSessionAt(int index) const
     {
-        if (index < 0 || index >= static_cast<int>(sessions.size()))
-            throw AppException("TrainingLog: invalid index in getSessionAt");
-        return sessions.at(index);
+        return sessions.getAt(index);
     }
 
     int getSavedReportCountOfType(const std::string& type) const
@@ -1096,19 +1375,24 @@ int getMenuChoice()
     return choice;
 }
 
-void printSessionsTable(const vector<double>& sessions)
+void printSessionsTable(const SessionLinkedList& sessions)
 {
     cout << "\nSession Breakdown:\n";
     cout << left << setw(10) << "#" << setw(12) << "Hours" << "\n";
 
-    for (size_t i = 0; i < sessions.size(); ++i)
+    int index = 1;
+    for (SessionLinkedList::Iterator it = sessions.begin(); it != sessions.end(); ++it)
     {
-        cout << left << setw(10) << (i + 1)
-            << setw(12) << sessions.at(i) << "\n";
+        cout << left << setw(10) << index
+            << setw(12) << *it << "\n";
+        index++;
     }
+
+    if (sessions.size() == 0)
+        cout << "(empty)\n";
 }
 
-string levelToString(PlayerLevel level)
+string levelToString(int level)
 {
     switch (level)
     {
@@ -1348,8 +1632,128 @@ TEST_CASE("Week 7: ReportManager operator-= throws on invalid removal")
     CHECK_THROWS_AS(m -= -1, AppException);
 }
 
+// ---------- Week 8: recursion tests ----------
+TEST_CASE("Week 8: ReportManager recursion counts types correctly (empty)")
+{
+    ReportManager m(1);
+    CHECK(m.countReportsOfType("Level") == 0);
+    CHECK(m.countReportsOfType("Recovery") == 0);
+    CHECK(m.countReportsOfType("Training Plan") == 0);
+}
+
+TEST_CASE("Week 8: ReportManager recursion counts types correctly (mixed)")
+{
+    ReportManager m(2);
+
+    m += new LevelReport();
+    m += new RecoveryReport();
+    m += new RecoveryReport();
+    m += new TrainingPlanReport();
+
+    CHECK(m.countReportsOfType("Level") == 1);
+    CHECK(m.countReportsOfType("Recovery") == 2);
+    CHECK(m.countReportsOfType("Training Plan") == 1);
+    CHECK(m.countReportsOfType("DoesNotExist") == 0);
+}
+
+// ---------- Week 10: linked list ADT tests ----------
+TEST_CASE("Week 10: linked list insertFirst works on empty list")
+{
+    SessionLinkedList list;
+    CHECK(list.isEmpty() == true);
+
+    list.insertFirst(2.5);
+
+    CHECK(list.isEmpty() == false);
+    CHECK(list.size() == 1);
+    CHECK(list.getAt(0) == doctest::Approx(2.5));
+}
+
+TEST_CASE("Week 10: linked list insertFirst and insertLast preserve positions")
+{
+    SessionLinkedList list;
+    list.insertFirst(2.0);
+    list.insertFirst(1.0);
+    list.insertLast(3.0);
+
+    CHECK(list.size() == 3);
+    CHECK(list.getAt(0) == doctest::Approx(1.0));
+    CHECK(list.getAt(1) == doctest::Approx(2.0));
+    CHECK(list.getAt(2) == doctest::Approx(3.0));
+}
+
+TEST_CASE("Week 10: linked list search finds values")
+{
+    SessionLinkedList list;
+    list.insertLast(3.0);
+    list.insertLast(5.0);
+    list.insertLast(7.0);
+
+    CHECK(list.search(3.0) == 0);
+    CHECK(list.search(5.0) == 1);
+    CHECK(list.search(7.0) == 2);
+}
+
+TEST_CASE("Week 10: linked list search returns -1 when missing")
+{
+    SessionLinkedList list;
+    list.insertLast(1.0);
+    list.insertLast(2.0);
+
+    CHECK(list.search(9.0) == -1);
+}
+
+TEST_CASE("Week 10: linked list deleteValue removes existing node")
+{
+    SessionLinkedList list;
+    list.insertLast(1.0);
+    list.insertLast(2.0);
+    list.insertLast(3.0);
+
+    CHECK(list.deleteValue(2.0) == true);
+    CHECK(list.size() == 2);
+    CHECK(list.getAt(0) == doctest::Approx(1.0));
+    CHECK(list.getAt(1) == doctest::Approx(3.0));
+}
+
+TEST_CASE("Week 10: linked list deleteValue returns false when missing")
+{
+    SessionLinkedList list;
+    list.insertLast(1.0);
+    list.insertLast(2.0);
+
+    CHECK(list.deleteValue(5.0) == false);
+    CHECK(list.size() == 2);
+}
+
+TEST_CASE("Week 10: linked list print handles empty list")
+{
+    SessionLinkedList list;
+    ostringstream oss;
+    list.print(oss);
+
+    CHECK(oss.str() == "(empty)");
+}
+
+TEST_CASE("Week 10: iterator traverses linked list correctly")
+{
+    SessionLinkedList list;
+    list.insertLast(1.5);
+    list.insertLast(2.5);
+    list.insertLast(3.5);
+
+    vector<double> values;
+    for (SessionLinkedList::Iterator it = list.begin(); it != list.end(); ++it)
+        values.push_back(*it);
+
+    CHECK(values.size() == 3);
+    CHECK(values[0] == doctest::Approx(1.5));
+    CHECK(values[1] == doctest::Approx(2.5));
+    CHECK(values[2] == doctest::Approx(3.5));
+}
+
 // ---------- TrainingLog tests ----------
-TEST_CASE("TrainingLog: addSession updates stats (vector)")
+TEST_CASE("TrainingLog: addSession updates stats (linked list)")
 {
     TrainingLog log;
 
@@ -1379,32 +1783,7 @@ TEST_CASE("TrainingLog: addSession guard cases (negative is invalid)")
     CHECK(log.addSession(1.0) == false);
 }
 
-// ---------- Week 8: recursion tests ----------
-TEST_CASE("Week 8: ReportManager recursion counts types correctly (empty)")
-{
-    ReportManager m(1);
-    CHECK(m.countReportsOfType("Level") == 0);
-    CHECK(m.countReportsOfType("Recovery") == 0);
-    CHECK(m.countReportsOfType("Training Plan") == 0);
-}
-
-TEST_CASE("Week 8: ReportManager recursion counts types correctly (mixed)")
-{
-    ReportManager m(2);
-
-    m += new LevelReport();
-    m += new RecoveryReport();
-    m += new RecoveryReport();
-    m += new TrainingPlanReport();
-
-    CHECK(m.countReportsOfType("Level") == 1);
-    CHECK(m.countReportsOfType("Recovery") == 2);
-    CHECK(m.countReportsOfType("Training Plan") == 1);
-    CHECK(m.countReportsOfType("DoesNotExist") == 0);
-}
-
-// ---------- Week 9: vector / sequential search / sort / binary search ----------
-TEST_CASE("Week 9: sequential search finds correct index")
+TEST_CASE("Week 10: sequential search finds correct index")
 {
     TrainingLog log;
     log.addSession(3.0);
@@ -1416,7 +1795,7 @@ TEST_CASE("Week 9: sequential search finds correct index")
     CHECK(log.sequentialSearchSession(4.0) == 2);
 }
 
-TEST_CASE("Week 9: sequential search returns -1 when not found")
+TEST_CASE("Week 10: sequential search returns -1 when not found")
 {
     TrainingLog log;
     log.addSession(2.0);
@@ -1425,13 +1804,13 @@ TEST_CASE("Week 9: sequential search returns -1 when not found")
     CHECK(log.sequentialSearchSession(7.0) == -1);
 }
 
-TEST_CASE("Week 9: sequential search on empty vector returns -1")
+TEST_CASE("Week 10: sequential search on empty list returns -1")
 {
     TrainingLog log;
     CHECK(log.sequentialSearchSession(2.0) == -1);
 }
 
-TEST_CASE("Week 9: bubble sort orders vector ascending")
+TEST_CASE("Week 10: bubble sort orders linked list ascending")
 {
     TrainingLog log;
     log.addSession(4.0);
@@ -1447,7 +1826,7 @@ TEST_CASE("Week 9: bubble sort orders vector ascending")
     CHECK(log.getSessionAt(3) == doctest::Approx(4.0));
 }
 
-TEST_CASE("Week 9: bubble sort handles empty vector")
+TEST_CASE("Week 10: bubble sort handles empty list")
 {
     TrainingLog log;
     log.sortSessionsBubble();
@@ -1455,7 +1834,7 @@ TEST_CASE("Week 9: bubble sort handles empty vector")
     CHECK(log.getSessionCount() == 0);
 }
 
-TEST_CASE("Week 9: bubble sort handles one element")
+TEST_CASE("Week 10: bubble sort handles one element")
 {
     TrainingLog log;
     log.addSession(2.5);
@@ -1466,7 +1845,7 @@ TEST_CASE("Week 9: bubble sort handles one element")
     CHECK(log.getSessionAt(0) == doctest::Approx(2.5));
 }
 
-TEST_CASE("Week 9: binary search finds element after sorting")
+TEST_CASE("Week 10: binary search finds element after sorting")
 {
     TrainingLog log;
     log.addSession(4.0);
@@ -1480,7 +1859,7 @@ TEST_CASE("Week 9: binary search finds element after sorting")
     CHECK(log.getSessionAt(index) == doctest::Approx(3.0));
 }
 
-TEST_CASE("Week 9: binary search returns -1 when not found")
+TEST_CASE("Week 10: binary search returns -1 when not found")
 {
     TrainingLog log;
     log.addSession(4.0);
@@ -1490,13 +1869,13 @@ TEST_CASE("Week 9: binary search returns -1 when not found")
     CHECK(log.binarySearchSession(9.0) == -1);
 }
 
-TEST_CASE("Week 9: binary search on empty vector returns -1")
+TEST_CASE("Week 10: binary search on empty list returns -1")
 {
     TrainingLog log;
     CHECK(log.binarySearchSession(5.0) == -1);
 }
 
-TEST_CASE("Week 9: getSessionAt throws on invalid index")
+TEST_CASE("Week 10: getSessionAt throws on invalid index")
 {
     TrainingLog log;
     log.addSession(1.0);

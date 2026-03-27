@@ -1,15 +1,16 @@
-WEEKLY PERFORMANCE REPORT (Week 9)
+WEEKLY PERFORMANCE REPORT (Week 10)
 Section: LEVEL
 ----------------------------------
-Player:                              ?????
+Player:                               Alex
 Age:                                    12
-Total training:                         21
-Avg training:                           21
-Avg sleep:                              12
-Level:                            Semi-Pro
-Readiness:                             235
-Advice:               Improve sleep routine.
+Total training:                          3
+Avg training:                          1.5
+Avg sleep:                               2
+Level:                             Amateur
+Readiness:                             -10
+Advice:               Build base: 3 sessions + 8h sleep.
 
 Session details:
 Session   Hours          
-1         21             
+1         1              
+2         2              
