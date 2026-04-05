@@ -1,16 +1,15 @@
 WEEKLY PERFORMANCE REPORT (Week 10)
 Section: LEVEL
 ----------------------------------
-Player:                               Alex
-Age:                                    12
-Total training:                          3
-Avg training:                          1.5
-Avg sleep:                               2
+Player:                      Jordan Player
+Age:                                    16
+Total training:                        2.5
+Avg training:                          2.5
+Avg sleep:                               8
 Level:                             Amateur
-Readiness:                             -10
+Readiness:                              30
 Advice:               Build base: 3 sessions + 8h sleep.
 
 Session details:
 Session   Hours          
-1         1              
-2         2              
+1         2.5            

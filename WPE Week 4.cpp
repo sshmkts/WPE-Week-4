@@ -1,13 +1,11 @@
-// Week 10 - Weekly Performance Evaluator (UPGRADE from Week 9)
-// This week: C++ Linked Lists (Chapter 17)
-// Week 10 Requirements implemented:
-// - Upgrade Week 9 codebase (NOT a total rewrite)
-// - Replace one existing structure with a custom linked list ADT
-// - Added unordered linked list for training sessions
-// - Added iterator class for traversal
-// - Added insert, delete, search, print/traverse operations
-// - Updated doctests for linked list behavior
-// - Keep prior applicable tests
+// Week 11 - Weekly Performance Evaluator (UPGRADE from Week 10)
+// This week: C++ Stacks and Queues (Chapter 18)
+// Week 11 Requirements implemented:
+// - Added a array-based stack for undo history
+// - Added a circular queue for FIFO report tracking
+// - Integrated the stack as an undo option for session changes
+// - Updated doctests for stack/queue behavior and edge cases
+// - Kept prior applicable tests
 // - Show diff in video
 // - CRT memory leak verification output (debug)
 // - Tag repo "Week10 Programming Assignment"
@@ -65,14 +63,14 @@ const double W_TRAIN = 10.0;
 const double W_SLEEP = 5.0;
 
 const int INPUT_FLUSH = 10000;
-const int MAX_SESSIONS = 5;
+const int MAX_SESSIONS = 7;
 
 const int MIN_AGE = 1;
 const double MIN_TRAINING_HOURS = 0.0;
 const double MIN_SLEEP_HOURS = 0.01;
 
 const int MENU_MIN_CHOICE = 0;
-const int MENU_MAX_CHOICE = 5;
+const int MENU_MAX_CHOICE = 6;
 
 const double SHIFT_MIN = 10.0;
 
@@ -197,6 +195,192 @@ public:
     T operator[](int index) const
     {
         return at(index);
+    }
+};
+
+// --------------------
+// Week 11: custom array-based stack
+// Chosen because undo history only needs simple LIFO behavior.
+// --------------------
+template <typename T>
+class ArrayStack
+{
+private:
+    T* data;
+    int topIndex;
+    int capacity;
+
+    void resize(int newCapacity)
+    {
+        if (newCapacity <= capacity) return;
+
+        T* newData = new T[newCapacity];
+        for (int i = 0; i <= topIndex; ++i)
+            newData[i] = data[i];
+
+        for (int i = topIndex + 1; i < newCapacity; ++i)
+            newData[i] = T();
+
+        delete[] data;
+        data = newData;
+        capacity = newCapacity;
+    }
+
+public:
+    ArrayStack(int initialCapacity = 4)
+    {
+        if (initialCapacity < 1) initialCapacity = 1;
+
+        capacity = initialCapacity;
+        topIndex = -1;
+        data = new T[capacity];
+
+        for (int i = 0; i < capacity; ++i)
+            data[i] = T();
+    }
+
+    ~ArrayStack()
+    {
+        delete[] data;
+        data = nullptr;
+        topIndex = -1;
+        capacity = 0;
+    }
+
+    ArrayStack(const ArrayStack&) = delete;
+    ArrayStack& operator=(const ArrayStack&) = delete;
+
+    void push(const T& value)
+    {
+        if (topIndex + 1 >= capacity)
+            resize(capacity * 2);
+
+        data[++topIndex] = value;
+    }
+
+    T pop()
+    {
+        if (isEmpty())
+            throw AppException("ArrayStack: cannot pop from empty stack");
+
+        T value = data[topIndex];
+        data[topIndex] = T();
+        topIndex--;
+        return value;
+    }
+
+    T top() const
+    {
+        if (isEmpty())
+            throw AppException("ArrayStack: cannot peek empty stack");
+
+        return data[topIndex];
+    }
+
+    bool isEmpty() const
+    {
+        return topIndex < 0;
+    }
+};
+
+// --------------------
+// Week 11: custom array-based circular queue
+// Chosen because weekly training is naturally FIFO and capped at 7 days.
+// --------------------
+template <typename T>
+class CircularQueue
+{
+private:
+    T* data;
+    int capacity;
+    int frontIndex;
+    int rearIndex;
+    int count;
+
+public:
+    CircularQueue(int initialCapacity = MAX_SESSIONS)
+    {
+        if (initialCapacity < 1) initialCapacity = 1;
+
+        capacity = initialCapacity;
+        frontIndex = 0;
+        rearIndex = -1;
+        count = 0;
+        data = new T[capacity];
+
+        for (int i = 0; i < capacity; ++i)
+            data[i] = T();
+    }
+
+    ~CircularQueue()
+    {
+        delete[] data;
+        data = nullptr;
+        capacity = 0;
+        frontIndex = 0;
+        rearIndex = -1;
+        count = 0;
+    }
+
+    CircularQueue(const CircularQueue&) = delete;
+    CircularQueue& operator=(const CircularQueue&) = delete;
+
+    bool enqueue(const T& value)
+    {
+        if (count == capacity)
+            return false;
+
+        rearIndex = (rearIndex + 1) % capacity;
+        data[rearIndex] = value;
+        count++;
+        return true;
+    }
+
+    T dequeue()
+    {
+        if (isEmpty())
+            throw AppException("CircularQueue: cannot dequeue from empty queue");
+
+        T value = data[frontIndex];
+        data[frontIndex] = T();
+        frontIndex = (frontIndex + 1) % capacity;
+        count--;
+
+        if (count == 0)
+        {
+            frontIndex = 0;
+            rearIndex = -1;
+        }
+
+        return value;
+    }
+
+    T front() const
+    {
+        if (isEmpty())
+            throw AppException("CircularQueue: cannot access front of empty queue");
+
+        return data[frontIndex];
+    }
+
+    bool isEmpty() const
+    {
+        return count == 0;
+    }
+
+    int size() const
+    {
+        return count;
+    }
+
+    void clear()
+    {
+        for (int i = 0; i < capacity; ++i)
+            data[i] = T();
+
+        frontIndex = 0;
+        rearIndex = -1;
+        count = 0;
     }
 };
 
@@ -864,6 +1048,17 @@ public:
     int getSize() const { return items.getSize(); }
     int getCapacity() const { return items.getCapacity(); }
 
+    int indexOf(WeeklyReport* target) const
+    {
+        for (int i = 0; i < items.getSize(); ++i)
+        {
+            if (items.at(i) == target)
+                return i;
+        }
+
+        return -1;
+    }
+
     WeeklyReport* operator[](int index) const
     {
         return items.at(index);
@@ -934,6 +1129,7 @@ private:
     double sleepHours;
 
     SessionLinkedList sessions;
+    CircularQueue<double> weeklySessionQueue;
 
     double totalTraining;
     double avgTraining;
@@ -943,6 +1139,7 @@ private:
     string advice;
 
     ReportManager manager;
+    ArrayStack<WeeklyReport*> undoHistory;
 
     void computeTrainingStats()
     {
@@ -999,6 +1196,7 @@ private:
         rpt->setAdvice(advice);
 
         manager += rpt;
+        undoHistory.push(rpt);
 
         ofstream out("report.txt");
         if (out)
@@ -1076,6 +1274,7 @@ private:
         rpt->setAdvice(advice);
 
         manager += rpt;
+        undoHistory.push(rpt);
         cout << "\n(Training plan report added to manager)\n";
     }
 
@@ -1113,6 +1312,7 @@ private:
         rpt->setAdvice(advice);
 
         manager += rpt;
+        undoHistory.push(rpt);
         cout << "\n(Recovery report added to manager)\n";
     }
 
@@ -1138,9 +1338,30 @@ private:
         }
     }
 
+    void undoLastAddedReport()
+    {
+        if (undoHistory.isEmpty())
+        {
+            cout << "\nNothing to undo.\n";
+            return;
+        }
+
+        WeeklyReport* lastAdded = undoHistory.pop();
+        int index = manager.indexOf(lastAdded);
+
+        if (index == -1)
+        {
+            cout << "\nThe last added report was already removed.\n";
+            return;
+        }
+
+        manager -= index;
+        cout << "\nUndid the last added report.\n";
+    }
+
 public:
     TrainingLog()
-        : manager(2)
+        : weeklySessionQueue(MAX_SESSIONS), manager(2), undoHistory(4)
     {
         name = "";
         age = 0;
@@ -1172,12 +1393,14 @@ public:
         cin.ignore(INPUT_FLUSH, '\n');
 
         sessions.clear();
+        weeklySessionQueue.clear();
 
         cout << "\nEnter training hours for each session:\n";
         for (int i = 0; i < inputSessionCount; ++i)
         {
             double hours = getValidDouble("  Session " + to_string(i + 1) + ": ", MIN_TRAINING_HOURS);
             sessions.insertLast(hours);
+            weeklySessionQueue.enqueue(hours);
         }
 
         sleepHours = getValidDouble("Avg sleep hours per night: ", MIN_SLEEP_HOURS);
@@ -1210,6 +1433,9 @@ public:
             case 5:
                 deleteReport();
                 break;
+            case 6:
+                undoLastAddedReport();
+                break;
             case 0:
                 cout << "\nExiting... (Manager destructor will clean memory)\n";
                 break;
@@ -1222,6 +1448,7 @@ public:
     {
         if (hours < 0.0) return false;
         if (sessions.size() >= MAX_SESSIONS) return false;
+        if (!weeklySessionQueue.enqueue(hours)) return false;
 
         sessions.insertLast(hours);
         computeTrainingStats();
@@ -1361,6 +1588,7 @@ int getMenuChoice()
     cout << "  3) Add Recovery Report\n";
     cout << "  4) Print All Saved Reports\n";
     cout << "  5) Delete a Report\n";
+    cout << "  6) Undo Last Added Report\n";
     cout << "  0) Quit\n";
     cout << "Enter choice: ";
 
@@ -1882,6 +2110,74 @@ TEST_CASE("Week 10: getSessionAt throws on invalid index")
 
     CHECK_THROWS_AS(log.getSessionAt(-1), AppException);
     CHECK_THROWS_AS(log.getSessionAt(1), AppException);
+}
+
+// Week 11 Test Cases for ArrayStack and CircularQueue, and undo functionality in TrainingLog
+TEST_CASE("Week 11: ArrayStack supports push pop top and isEmpty")
+{
+    ArrayStack<int> stack(1);
+
+    CHECK(stack.isEmpty() == true);
+
+    stack.push(10);
+    stack.push(20);
+
+    CHECK(stack.isEmpty() == false);
+    CHECK(stack.top() == 20);
+    CHECK(stack.pop() == 20);
+    CHECK(stack.top() == 10);
+    CHECK(stack.pop() == 10);
+    CHECK(stack.isEmpty() == true);
+}
+
+TEST_CASE("Week 11: CircularQueue supports enqueue dequeue front and isEmpty")
+{
+    CircularQueue<double> queue(MAX_SESSIONS);
+
+    CHECK(MAX_SESSIONS == 7);
+    CHECK(queue.isEmpty() == true);
+    CHECK(queue.enqueue(1.5) == true);
+    CHECK(queue.enqueue(2.5) == true);
+    CHECK(queue.isEmpty() == false);
+    CHECK(queue.front() == doctest::Approx(1.5));
+    CHECK(queue.dequeue() == doctest::Approx(1.5));
+    CHECK(queue.front() == doctest::Approx(2.5));
+}
+
+TEST_CASE("Week 11: CircularQueue enforces the 7-day weekly limit")
+{
+    CircularQueue<int> queue(MAX_SESSIONS);
+
+    for (int day = 1; day <= MAX_SESSIONS; ++day)
+        CHECK(queue.enqueue(day) == true);
+
+    CHECK(queue.enqueue(8) == false);
+    CHECK(queue.front() == 1);
+    CHECK(queue.dequeue() == 1);
+    CHECK(queue.enqueue(8) == true);
+}
+
+TEST_CASE("Week 11: undo removes the last added report")
+{
+    TrainingLog log;
+
+    istringstream fakeInput(
+        "Jordan Player\n"
+        "16\n"
+        "1\n"
+        "2.5\n"
+        "8.0\n"
+        "1\n"
+        "6\n"
+        "0\n"
+    );
+
+    streambuf* originalCin = cin.rdbuf(fakeInput.rdbuf());
+    log.setup();
+    log.runMenu();
+    cin.rdbuf(originalCin);
+
+    CHECK(log.getSavedReportCountOfType("Level") == 0);
 }
 
 int main(int argc, char** argv)
