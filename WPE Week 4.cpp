@@ -26,6 +26,7 @@
 #include <stdexcept>
 #include <exception>
 #include <vector>
+#include <map> //added for STL Map
 
 using namespace std;
 
@@ -1118,6 +1119,7 @@ public:
 
 // --------------------
 // TrainingLog
+// Week 12: STL Map to store training benchmarks, enhances the program by centralizing Lookup for training ta
 // Week 10: sessions changed from vector to custom linked list
 // Week 9 search/sort logic kept, adapted to linked list
 // --------------------
@@ -1141,26 +1143,46 @@ private:
     ReportManager manager;
     ArrayStack<WeeklyReport*> undoHistory;
 
-    void computeTrainingStats()
-    {
-        totalTraining = 0.0;
+    //STL Map!
+    std::map<string, double> config;
 
-        for (SessionLinkedList::Iterator it = sessions.begin(); it != sessions.end(); ++it)
-            totalTraining += *it;
-
-        avgTraining = (!sessions.isEmpty() ? totalTraining / sessions.size() : 0.0);
+    void initConfig(){
+        // Insert: Populate the map with training rules
+        config["PRO_TECH"] = PRO_TECH_MINS;
+        config["PRO_COND"] = PRO_COND_MINS;
+        config["INT_TECH"] = INT_TECH_MINS;
+        config["INT_COND"] = INT_COND_MINS;
+        config["BEG_TECH"] = BEG_TECH_MINS;
+        config["BEG_COND"] = BEG_COND_MINS;
     }
 
+    // Lookup: Helper to safely get values from map
+    double getConfig(string key) const {
+        auto it = config.find(key);
+        if(it != config.end()) return it->second;
+        return 0.0; // Edge case: key doesnt exist my dude
+    }
+    //void computeTrainingStats()
+    //{
+        //totalTraining = 0.0;
+
+        //for (SessionLinkedList::Iterator it = sessions.begin(); it != sessions.end(); ++it)
+            //totalTraining += *it;
+
+        //avgTraining = (!sessions.isEmpty() ? totalTraining / sessions.size() : 0.0);
+    //}
+
+    // Modified version of this function
     void evaluateLevel()
     {
         readinessScore = (avgTraining * W_TRAIN) + ((sleepHours - SLEEP_MIN_OK) * W_SLEEP);
 
-        if (avgTraining >= PRO_TRAIN_HRS &&
+        if (avgTraining >= getConfig("PRO_MIN_HRS") &&
             (sleepHours >= SLEEP_GOOD_MIN && sleepHours <= SLEEP_GOOD_MAX))
         {
             level = LEVEL_PRO;
         }
-        else if (avgTraining >= INT_TRAIN_HRS && sleepHours >= SLEEP_MIN_OK)
+        else if (avgTraining >= getConfig("INT_MIN_HRS") && sleepHours >= SLEEP_MIN_OK)
         {
             level = LEVEL_SEMI_PRO;
         }
@@ -1232,30 +1254,20 @@ private:
         cout << "\n(Level report added to manager)\n";
     }
 
+    // Modified function
     void addTrainingPlanReport()
     {
         string planFocus;
         double techMins;
         double condMins;
 
-        switch (level)
-        {
-        case LEVEL_PRO:
-            techMins = PRO_TECH_MINS;
-            condMins = PRO_COND_MINS;
-            planFocus = "High Tempo";
-            break;
-        case LEVEL_SEMI_PRO:
-            techMins = INT_TECH_MINS;
-            condMins = INT_COND_MINS;
-            planFocus = "Balanced";
-            break;
-        default:
-            techMins = BEG_TECH_MINS;
-            condMins = BEG_COND_MINS;
-            planFocus = "Fundamentals";
-            break;
-        }
+        // removing switch cases so we can use the Level to build the map key dynamically
+        string prefix = (level == LEVEL_PRO ? "PRO" : (level ++ LEVEL_SEMI_PRO ? "INT" : "BEG"));
+
+        techMins = getConfig(prefix + "_TECH");
+        condMins = getConfig(prefix + "_COND");
+
+        planFocus = (level == LEVEL_PRO ? "High Tempo" : (level == LEVEL_SEMI_PRO ? "Balanced" : "Fundamentals"));
 
         if (sleepHours < SLEEP_MIN_OK && condMins >= SHIFT_MIN)
         {
@@ -1359,6 +1371,19 @@ private:
         cout << "\nUndid the last added report.\n";
     }
 
+    // Iterate: Display all rules (useful for debugging)
+    void showConfig() const{
+        cout << "\n--- System Configuration Map ---\n";
+        for(auto const& [key, val] : config){
+            cout << key << ": " << val << endl;
+        }
+    }
+
+    // Delete: Remove a rule
+    void deleteRule(string key){
+        config.erase(key);
+    }
+
 public:
     TrainingLog()
         : weeklySessionQueue(MAX_SESSIONS), manager(2), undoHistory(4)
@@ -1371,6 +1396,8 @@ public:
         level = LEVEL_AMATEUR;
         readinessScore = 0.0;
         advice = "";
+
+        initConfig(); // Initialize the map on startup
     }
 
     void setup()
@@ -2178,6 +2205,26 @@ TEST_CASE("Week 11: undo removes the last added report")
     cin.rdbuf(originalCin);
 
     CHECK(log.getSavedReportCountOfType("Level") == 0);
+}
+
+// Week 12 testing the new functions
+TEST_CASE("Testing TrainingLog Map Configs"){
+    TrainingLog log;
+
+    SUBCASE("Map Lookup - Existing Keys"){
+        //should find the constants correctly
+        CHECK(log.getConfig("PRO_TECH") == 50.0);
+        CHECK(log.getConfig("BEG_COND") == 20.0);
+    }
+
+    SUBCASE("Map Lookup - Non-existent Key (Edge Case)"){
+        CHECK(log.geetConfig("NON_EXISTENT") == 0.0);
+    }
+
+    SUBCASE("Map Delete and Verify"){
+        log.deleteRule("PRO_TECH");
+        CHECK(log.getConfig("PRO_TECH") == 0.0);
+    }
 }
 
 int main(int argc, char** argv)
