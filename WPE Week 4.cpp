@@ -9,6 +9,12 @@
 // - Show diff in video
 // - CRT memory leak verification output (debug)
 // - Tag repo "Week10 Programming Assignment"
+// Week 13 Requirements implemented:
+// - Added nlohmann/json library (json.hpp)
+// - Added training_sessions.json data file
+// - Added loadFromJSON() to TrainingLog to load sessions from JSON
+// - JSON data populates SessionLinkedList and CircularQueue
+// - Added doctests for JSON loading, missing file, malformed JSON
 
 #ifdef _DEBUG
 #define DOCTEST_CONFIG_IMPLEMENT
@@ -26,6 +32,13 @@
 #include <stdexcept>
 #include <exception>
 #include <vector>
+
+// ===== WEEK 13 ADDITION =====
+// nlohmann/json single header library
+// WHY? Because it is the most widely used JSON library for modern C++
+// and allows clean intuitive JSON parsing without writing our own parser
+#include "json.hpp"
+using json = nlohmann::json;
 
 using namespace std;
 
@@ -1373,6 +1386,110 @@ public:
         advice = "";
     }
 
+    // ===== WEEK 13 ADDITION =====
+    // loadFromJSON — reads training_sessions.json from disk and loads
+    // session hours into the existing SessionLinkedList and CircularQueue
+    // WHY load into existing structures? Because the requirement says the
+    // loaded data must interact with the existing program in a meaningful way
+    // WHY use try/catch? Because the file might not exist or the JSON might
+    // be malformed — we handle both cases gracefully without crashing
+    bool loadFromJSON(const string& filename)
+    {
+        // ===== WEEK 13 ADDITION =====
+        // Step 1: open the JSON file using standard file I/O
+        ifstream file(filename);
+        if (!file.is_open())
+        {
+            // file not found — handle gracefully
+            cout << "JSON file not found: " << filename << "\n";
+            return false;
+        }
+
+        try
+        {
+            // ===== WEEK 13 ADDITION =====
+            // Step 2: parse the file contents using nlohmann/json
+            // WHY nlohmann/json? Because it is the most widely used
+            // C++ JSON library and has clean intuitive syntax
+            json jsonData;
+            file >> jsonData;
+
+            // ===== WEEK 13 ADDITION =====
+            // Step 3: validate that the JSON is an array
+            if (!jsonData.is_array())
+                throw AppException("JSON root must be an array");
+
+            // ===== WEEK 13 ADDITION =====
+            // Step 4: clear existing sessions before loading from JSON
+            // WHY clear first? So we dont double-add sessions
+            sessions.clear();
+            weeklySessionQueue.clear();
+
+            // ===== WEEK 13 ADDITION =====
+            // Step 5: iterate over the JSON array and load data into
+            // the existing SessionLinkedList and CircularQueue
+            // WHY these structures? Because they already exist in the
+            // program and are the natural home for session data
+            int loaded = 0;
+            for (const auto& obj : jsonData)
+            {
+                // stop loading if we hit the max session limit
+                if (loaded >= MAX_SESSIONS) break;
+
+                // extract sessionHours and sleepHours from each JSON object
+                double sessionHours = obj.at("sessionHours").get<double>();
+                double jsonSleepHours = obj.at("sleepHours").get<double>();
+                string playerName = obj.at("playerName").get<string>();
+
+                // load session hours into the linked list
+                sessions.insertLast(sessionHours);
+
+                // also enqueue into the circular queue
+                weeklySessionQueue.enqueue(sessionHours);
+
+                // use the first player's name and sleep hours as the log name
+                if (loaded == 0)
+                {
+                    name = playerName;
+                    sleepHours = jsonSleepHours;
+                }
+
+                loaded++;
+            }
+
+            // ===== WEEK 13 ADDITION =====
+            // Step 6: recompute stats and level after loading JSON data
+            computeTrainingStats();
+            evaluateLevel();
+
+            cout << "Loaded " << loaded << " session(s) from " << filename << "\n";
+            return true;
+        }
+        catch (const json::exception& ex)
+        {
+            // ===== WEEK 13 ADDITION =====
+            // handle malformed JSON gracefully
+            cout << "Malformed JSON in " << filename << ": " << ex.what() << "\n";
+            return false;
+        }
+        catch (const AppException& ex)
+        {
+            cout << "JSON load error: " << ex.what() << "\n";
+            return false;
+        }
+    }
+
+    // ===== WEEK 13 ADDITION =====
+    // expose JSON load to the menu system
+    void loadJSONFromMenu()
+    {
+        string filename;
+        cout << "Enter JSON filename to load: ";
+        cin >> filename;
+        cin.ignore(INPUT_FLUSH, '\n');
+        loadFromJSON(filename);
+    }
+
     void setup()
     {
         cout << "Enter player's full name: ";
@@ -1638,6 +1755,14 @@ int main()
     showBanner();
 
     TrainingLog tracker;
+
+    // ===== WEEK 13 ADDITION =====
+    // Load sessions from JSON file at startup
+    // WHY at startup? So the user has preloaded data to work with
+    // immediately without having to enter everything manually
+    cout << "Loading sessions from JSON...\n";
+    tracker.loadFromJSON("training_sessions.json");
+
     tracker.setup();
     tracker.runMenu();
 
@@ -2112,7 +2237,7 @@ TEST_CASE("Week 10: getSessionAt throws on invalid index")
     CHECK_THROWS_AS(log.getSessionAt(1), AppException);
 }
 
-// Week 11 Test Cases for ArrayStack and CircularQueue, and undo functionality in TrainingLog
+// Week 11 Test Cases for ArrayStack and CircularQueue
 TEST_CASE("Week 11: ArrayStack supports push pop top and isEmpty")
 {
     ArrayStack<int> stack(1);
@@ -2178,6 +2303,112 @@ TEST_CASE("Week 11: undo removes the last added report")
     cin.rdbuf(originalCin);
 
     CHECK(log.getSavedReportCountOfType("Level") == 0);
+}
+
+// ===== WEEK 13 ADDITION =====
+// JSON Tests
+TEST_CASE("Week 13: loadFromJSON returns false for missing file")
+{
+    TrainingLog log;
+    // try to load a file that does not exist
+    bool result = log.loadFromJSON("does_not_exist.json");
+    CHECK(result == false);
+    // sessions should still be empty
+    CHECK(log.getSessionCount() == 0);
+}
+
+TEST_CASE("Week 13: loadFromJSON loads sessions into linked list correctly")
+{
+    // ===== WEEK 13 ADDITION =====
+    // create a temporary valid JSON file for testing
+    // WHY create it in the test? So the test is self-contained
+    // and does not depend on an external file existing
+    ofstream tempFile("test_sessions.json");
+    tempFile << R"([
+        {"playerName": "Test Player", "sessionHours": 2.5, "sleepHours": 7.5, "age": 18, "level": "Amateur"},
+        {"playerName": "Test Player", "sessionHours": 3.0, "sleepHours": 7.5, "age": 18, "level": "Amateur"},
+        {"playerName": "Test Player", "sessionHours": 4.0, "sleepHours": 7.5, "age": 18, "level": "Amateur"}
+    ])";
+    tempFile.close();
+
+    TrainingLog log;
+    bool result = log.loadFromJSON("test_sessions.json");
+
+    CHECK(result == true);
+    CHECK(log.getSessionCount() == 3);
+    CHECK(log.getSessionAt(0) == doctest::Approx(2.5));
+    CHECK(log.getSessionAt(1) == doctest::Approx(3.0));
+    CHECK(log.getSessionAt(2) == doctest::Approx(4.0));
+
+    // clean up temp file
+    remove("test_sessions.json");
+}
+
+TEST_CASE("Week 13: loadFromJSON handles malformed JSON gracefully")
+{
+    // ===== WEEK 13 ADDITION =====
+    // create a malformed JSON file for testing
+    ofstream badFile("bad_sessions.json");
+    badFile << "{ this is not valid json at all }}}";
+    badFile.close();
+
+    TrainingLog log;
+    bool result = log.loadFromJSON("bad_sessions.json");
+
+    // should return false and not crash
+    CHECK(result == false);
+    CHECK(log.getSessionCount() == 0);
+
+    // clean up
+    remove("bad_sessions.json");
+}
+
+TEST_CASE("Week 13: loadFromJSON respects MAX_SESSIONS limit")
+{
+    // ===== WEEK 13 ADDITION =====
+    // create a JSON file with more than MAX_SESSIONS entries
+    ofstream bigFile("big_sessions.json");
+    bigFile << "[\n";
+    for (int i = 0; i < 10; i++)
+    {
+        bigFile << "  {\"playerName\": \"Player\", \"sessionHours\": 1.0, \"sleepHours\": 7.0, \"age\": 18, \"level\": \"Amateur\"}";
+        if (i < 9) bigFile << ",";
+        bigFile << "\n";
+    }
+    bigFile << "]";
+    bigFile.close();
+
+    TrainingLog log;
+    bool result = log.loadFromJSON("big_sessions.json");
+
+    CHECK(result == true);
+    // should not exceed MAX_SESSIONS
+    CHECK(log.getSessionCount() <= MAX_SESSIONS);
+
+    // clean up
+    remove("big_sessions.json");
+}
+
+TEST_CASE("Week 13: loadFromJSON updates training stats after loading")
+{
+    // ===== WEEK 13 ADDITION =====
+    // verify that stats are recomputed after JSON load
+    ofstream tempFile("stats_sessions.json");
+    tempFile << R"([
+        {"playerName": "Test", "sessionHours": 2.0, "sleepHours": 8.0, "age": 20, "level": "Amateur"},
+        {"playerName": "Test", "sessionHours": 4.0, "sleepHours": 8.0, "age": 20, "level": "Amateur"}
+    ])";
+    tempFile.close();
+
+    TrainingLog log;
+    log.loadFromJSON("stats_sessions.json");
+
+    // total should be 6.0 average should be 3.0
+    CHECK(log.getTotalHours() == doctest::Approx(6.0));
+    CHECK(log.getAverageHours() == doctest::Approx(3.0));
+
+    // clean up
+    remove("stats_sessions.json");
 }
 
 int main(int argc, char** argv)
