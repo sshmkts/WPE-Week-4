@@ -1,0 +1,37 @@
+[
+    {
+        "playerName": "Jordan Player",
+        "sessionHours": 3.5,
+        "sleepHours": 7.5,
+        "age": 18,
+        "level": "Semi-Pro"
+    },
+    {
+        "playerName": "Alex Smith",
+        "sessionHours": 5.0,
+        "sleepHours": 8.0,
+        "age": 22,
+        "level": "Pro"
+    },
+    {
+        "playerName": "Mike Johnson",
+        "sessionHours": 2.0,
+        "sleepHours": 6.5,
+        "age": 16,
+        "level": "Amateur"
+    },
+    {
+        "playerName": "Sarah Davis",
+        "sessionHours": 4.5,
+        "sleepHours": 8.5,
+        "age": 20,
+        "level": "Pro"
+    },
+    {
+        "playerName": "Chris Lee",
+        "sessionHours": 1.5,
+        "sleepHours": 7.0,
+        "age": 17,
+        "level": "Amateur"
+    }
+]
